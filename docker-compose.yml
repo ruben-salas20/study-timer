@@ -1,0 +1,35 @@
+# docker-compose.yml — Development stack
+#
+# This file starts PocketBase only. The frontend is NOT a service here.
+# Run the frontend separately with `pnpm dev` inside ./frontend/ to get
+# Vite's HMR (hot module replacement), which requires a dev server process,
+# not a Docker container.
+#
+# Dev topology:
+#   - PocketBase listens on :8090 (exposed to host for direct API access)
+#   - Frontend dev server (pnpm dev) runs natively and proxies /api/* to :8090
+#     via the Vite `server.proxy` config (see frontend/vite.config.ts)
+#   - No Caddy in dev — Vite's dev server handles the SPA and API proxying
+#
+# Usage:
+#   docker compose up -d            # start PocketBase in background
+#   cd frontend && pnpm dev         # start frontend with HMR (separate terminal)
+#
+# PocketBase admin UI: http://localhost:8090/_/
+
+services:
+  pocketbase:
+    build:
+      context: ./backend
+      args:
+        PB_VERSION: "0.23.4"
+    ports:
+      - "8090:8090"
+    volumes:
+      # pb_data is the persistent database — kept on host, never in the image
+      - ./backend/pb_data:/pb/pb_data
+      # Migrations and hooks are mounted read-only so changes on host reflect
+      # inside the container without rebuilding the image
+      - ./backend/pb_migrations:/pb/pb_migrations:ro
+      - ./backend/pb_hooks:/pb/pb_hooks:ro
+    restart: unless-stopped
