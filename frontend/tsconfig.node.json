@@ -18,7 +18,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Node built-ins for vite.config.ts */
+    "types": ["node"]
   },
   "include": ["vite.config.ts"]
 }

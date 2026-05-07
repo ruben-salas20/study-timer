@@ -38,7 +38,7 @@ describe('sessions API', () => {
         create: vi.fn().mockResolvedValue(mockRecord),
         update: vi.fn(),
         getList: vi.fn(),
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       const { createSession } = await import('./sessions')
       const result = await createSession('stopwatch')
@@ -54,7 +54,7 @@ describe('sessions API', () => {
         create: vi.fn().mockResolvedValue(mockRecord),
         update: vi.fn(),
         getList: vi.fn(),
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       const { createSession } = await import('./sessions')
       const pomodoroConfig = { workMin: 25, breakMin: 5, cycles: 4 }
@@ -79,7 +79,7 @@ describe('sessions API', () => {
         create: vi.fn(),
         update: mockUpdate,
         getList: vi.fn(),
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       const { endSession } = await import('./sessions')
       await endSession('session-abc', 1500)
@@ -101,7 +101,7 @@ describe('sessions API', () => {
         create: vi.fn(),
         update: mockUpdate,
         getList: vi.fn(),
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       const { endSession } = await import('./sessions')
       await endSession('s1', 300)

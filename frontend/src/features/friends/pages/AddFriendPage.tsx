@@ -2,7 +2,7 @@
 // Two sections:
 //   1. "Tu código" — show current user's friendCode with copy + share
 //   2. "Agregar por código" — RHF + Zod form, calls sendFriendRequest
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -25,7 +25,6 @@ type AddFriendForm = z.infer<typeof addFriendFormSchema>
 
 export function AddFriendPage() {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const sendRequest = useSendFriendRequest()
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 

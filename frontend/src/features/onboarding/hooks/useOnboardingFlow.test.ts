@@ -148,7 +148,7 @@ describe('useOnboardingFlow', () => {
     const mockUpdate = vi.fn().mockResolvedValue({})
     vi.mocked(pb.collection).mockReturnValue({
       update: mockUpdate,
-    } as ReturnType<typeof pb.collection>)
+    } as unknown as ReturnType<typeof pb.collection>)
 
     const { useOnboardingFlow } = await import('./useOnboardingFlow')
     const { result } = renderHook(() => useOnboardingFlow(), { wrapper: createWrapper() })

@@ -61,7 +61,7 @@ describe('useAuth hook', () => {
     vi.mocked(login).mockResolvedValue({
       record: fakeUser,
       token: 'tok123',
-    } as Awaited<ReturnType<typeof login>>)
+    } as unknown as Awaited<ReturnType<typeof login>>)
 
     const { useAuth } = await import('./useAuth')
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() })

@@ -68,7 +68,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
 
     try {
       const registration = await navigator.serviceWorker.ready
-      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource
 
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,

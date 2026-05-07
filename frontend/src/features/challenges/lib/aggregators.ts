@@ -142,7 +142,7 @@ export interface GroupStreakState {
  * This keeps the logic simple and verifiable without real-time date tracking.
  */
 export function computeGroupStreakState(
-  challenge: Challenge,
+  _challenge: Challenge,
   sessionsByUser: Record<string, string[]>
 ): GroupStreakState {
   const userIds = Object.keys(sessionsByUser)

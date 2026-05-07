@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { updateProfile, changePassword } from '../api/profile'
 import { displayNameSchema, weeklyGoalSchema, passwordChangeSchema } from '../schemas'
-import type { DisplayNameInput, WeeklyGoalInput, PasswordChangeInput } from '../schemas'
+import type { PasswordChangeInput } from '../schemas'
 import { BottomNav } from '@/shared/ui/BottomNav'
 
 // ── Avatar initials helper ────────────────────────────────────────────────────

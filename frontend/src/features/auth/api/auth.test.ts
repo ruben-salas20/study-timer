@@ -45,7 +45,7 @@ describe('auth API', () => {
       vi.mocked(pb.collection).mockReturnValue({
         create: mockCreate,
         authWithPassword: mockAuthWithPassword,
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       await register({ displayName: 'Test User', email: 'test@test.com', password: 'password123' })
 
@@ -68,7 +68,7 @@ describe('auth API', () => {
       vi.mocked(pb.collection).mockReturnValue({
         create: mockCreate,
         authWithPassword: mockAuthWithPassword,
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       await register({ displayName: 'Test', email: 'a@b.com', password: 'pass1234' })
 
@@ -86,7 +86,7 @@ describe('auth API', () => {
       vi.mocked(pb.collection).mockReturnValue({
         create: vi.fn(),
         authWithPassword: mockAuthWithPassword,
-      } as ReturnType<typeof pb.collection>)
+      } as unknown as ReturnType<typeof pb.collection>)
 
       const result = await login({ email: 'a@b.com', password: 'pass1234' })
 

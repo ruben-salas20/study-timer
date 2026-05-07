@@ -115,6 +115,7 @@ export function ChallengeDetailPage() {
   }
 
   async function handleCancel() {
+    if (!challenge) return
     await cancelMutation.mutateAsync(challenge.id)
     navigate('/challenges')
   }
