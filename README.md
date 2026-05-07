@@ -258,6 +258,6 @@ Run these from the `frontend/` directory unless noted otherwise.
 | **F5 — Stats + profile** | Aggregated stats, settings | Done |
 | **F6 — PWA + push** | Manifest, service worker, VAPID notifications | Done |
 | **F7 — Production deploy** | VPS, Caddy, domain, backups | Done |
-| **F8 — Polish** | Micro-interactions, empty/error states, animations | Pending |
+| **F8 — Polish** | Active session rehydration, group streak, real PWA icons, UI primitives (EmptyState, Skeleton, Toast, ConfirmDialog, ErrorBoundary), microinteractions, accessibility audit | Done |
 
 See [ARCHITECTURE.md §9](./ARCHITECTURE.md) for the full roadmap and per-phase delivery criteria.
