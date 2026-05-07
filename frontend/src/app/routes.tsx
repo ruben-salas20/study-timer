@@ -1,17 +1,122 @@
-// routes.tsx — application routing
-// Stub routes for F1 foundation; will be fully wired in T22 with all feature pages.
+// routes.tsx — Full application routing (T22)
+// Public routes: /welcome, /register, /login
+// Protected routes (RequireAuth): /home, /onboarding/goal, /onboarding/invite, /settings, /timer, /friends, /challenges, /stats
+// Catch-all: 404
 // BrowserRouter is provided by providers.tsx — do NOT add it here.
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Link } from 'react-router-dom'
+import { RequireAuth } from '@/features/auth/components/RequireAuth'
+import { WelcomePage } from '@/features/auth/pages/WelcomePage'
+import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { HomePage } from '@/features/home/pages/HomePage'
+import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
+import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+
+/** Simple placeholder for routes not yet implemented */
+function Placeholder({ name }: { name: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground bg-background">
+      <h1 className="text-2xl font-bold">{name}</h1>
+      <p className="opacity-60 text-sm">Coming in a future sprint</p>
+      <Link to="/home" className="text-(--color-primary) text-sm">← Home</Link>
+    </div>
+  )
+}
+
+/** 404 fallback */
+function NotFound() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground bg-background">
+      <h1 className="text-4xl font-bold">404</h1>
+      <p className="opacity-60">Página no encontrada</p>
+      <Link to="/welcome" className="text-(--color-primary) text-sm">← Volver al inicio</Link>
+    </div>
+  )
+}
 
 /**
- * AppRoutes — renders the route tree.
- * This stub renders a redirect from / to /welcome as placeholder.
- * Full routing is implemented in T22.
+ * AppRoutes — renders the full route tree.
+ * Import and use in App.tsx.
  */
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Root redirect */}
       <Route path="/" element={<Navigate to="/welcome" replace />} />
+
+      {/* Public routes */}
+      <Route path="/welcome" element={<WelcomePage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected routes */}
+      <Route
+        path="/home"
+        element={
+          <RequireAuth>
+            <HomePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/onboarding/goal"
+        element={
+          <RequireAuth>
+            <OnboardingPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/onboarding/invite"
+        element={
+          <RequireAuth>
+            <OnboardingPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/timer"
+        element={
+          <RequireAuth>
+            <Placeholder name="Timer" />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/friends"
+        element={
+          <RequireAuth>
+            <Placeholder name="Amigos" />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/challenges"
+        element={
+          <RequireAuth>
+            <Placeholder name="Retos" />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/stats"
+        element={
+          <RequireAuth>
+            <Placeholder name="Stats" />
+          </RequireAuth>
+        }
+      />
+
+      {/* 404 catch-all */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

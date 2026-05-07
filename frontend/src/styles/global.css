@@ -3,7 +3,7 @@
 @import "tailwindcss";
 
 /* Custom design tokens via @theme */
-/* Sage accent palette — matches ARCHITECTURE.md accent color "sage" */
+/* Sage accent palette — default accent (ARCHITECTURE.md) */
 @theme {
   /* Sage green accent */
   --color-sage-50: oklch(97% 0.02 150);
@@ -17,7 +17,7 @@
   --color-sage-800: oklch(30% 0.08 150);
   --color-sage-900: oklch(20% 0.05 150);
 
-  /* Semantic tokens */
+  /* Semantic tokens — default to sage */
   --color-background: var(--color-white);
   --color-foreground: oklch(15% 0.02 255);
   --color-primary: var(--color-sage-500);
@@ -30,9 +30,58 @@
   --radius-card: 0.75rem;
 }
 
-/* Light / dark theme via data-theme attribute */
+/* ─── Light / dark theme via data-theme attribute ───────────────────────── */
 /* Default is light; set data-theme="dark" on <html> for dark mode */
 [data-theme="dark"] {
   --color-background: oklch(12% 0.02 255);
   --color-foreground: oklch(95% 0.01 255);
+  --color-primary: var(--color-sage-400);
+}
+
+/* ─── Accent palettes via data-accent attribute ─────────────────────────── */
+/* RISK-6: Use CSS vars in :root[data-accent="x"] — NOT Tailwind utilities  */
+/* Use bg-(--color-primary) syntax in v4 for dynamic values                 */
+
+/* Blue accent */
+:root[data-accent="blue"] {
+  --color-primary: oklch(55% 0.20 240);
+  --color-primary-foreground: oklch(98% 0.01 240);
+}
+
+[data-theme="dark"][data-accent="blue"],
+[data-accent="blue"][data-theme="dark"] {
+  --color-primary: oklch(65% 0.20 240);
+}
+
+/* Warm / amber accent */
+:root[data-accent="warm"] {
+  --color-primary: oklch(65% 0.18 60);
+  --color-primary-foreground: oklch(15% 0.05 60);
+}
+
+[data-theme="dark"][data-accent="warm"],
+[data-accent="warm"][data-theme="dark"] {
+  --color-primary: oklch(72% 0.18 60);
+}
+
+/* Mono / neutral accent */
+:root[data-accent="mono"] {
+  --color-primary: oklch(40% 0.00 0);
+  --color-primary-foreground: oklch(98% 0.00 0);
+}
+
+[data-theme="dark"][data-accent="mono"],
+[data-accent="mono"][data-theme="dark"] {
+  --color-primary: oklch(70% 0.00 0);
+}
+
+/* Sage is the default — explicit override for completeness */
+:root[data-accent="sage"] {
+  --color-primary: oklch(60% 0.13 150);
+  --color-primary-foreground: var(--color-white);
+}
+
+[data-theme="dark"][data-accent="sage"],
+[data-accent="sage"][data-theme="dark"] {
+  --color-primary: oklch(70% 0.12 150);
 }
