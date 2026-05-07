@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "gen:types": "pocketbase-typegen --db ./pb_data/data.db --json > src/shared/types/pocketbase.ts"
+    "gen:types": "pocketbase-typegen --db ./pb_data/data.db --json > src/shared/types/pocketbase.ts",
+    "gen:icons": "node ../scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

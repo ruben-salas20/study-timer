@@ -30,7 +30,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src/pwa',
       filename: 'sw.ts',
-      includeAssets: ['icons/*.png'],
+      includeAssets: ['icons/*.png', 'icons/*.svg'],
       // manifest is served from /manifest.webmanifest in public/
       // vite-plugin-pwa merges this config with the static file or generates one
       manifest: {
