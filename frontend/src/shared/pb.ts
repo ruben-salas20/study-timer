@@ -2,6 +2,8 @@
 // Single instance used throughout the frontend (TanStack Query + realtime subscriptions)
 // URL is injected at build time via VITE_PB_URL environment variable
 // See .env.example for required variables
+//
+// T10: implements full singleton; pb.test.ts (T09) is GREEN against this implementation
 import PocketBase from 'pocketbase'
 
 /**
@@ -16,6 +18,11 @@ const PB_URL: string =
  * Singleton PocketBase client.
  * Import this wherever you need to interact with the PocketBase API:
  *   import pb from '@/shared/pb'
+ *
+ * The client handles:
+ * - Authentication state (pb.authStore)
+ * - Realtime subscriptions (pb.collection().subscribe())
+ * - CRUD operations (pb.collection().getList(), .create(), .update(), .delete())
  */
 const pb = new PocketBase(PB_URL)
 
