@@ -14,6 +14,7 @@
     "gen:types": "pocketbase-typegen --db ./pb_data/data.db --json > src/shared/types/pocketbase.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.511.0",
     "pocketbase": "^0.21.0",
