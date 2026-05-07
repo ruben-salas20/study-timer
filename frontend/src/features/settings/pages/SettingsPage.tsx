@@ -1,9 +1,12 @@
 // SettingsPage.tsx — F5/F6 implementation
 // Theme, accent, timezone, focus mode toggle, notifications (F6), about, logout.
+// F8: ConfirmDialog for logout.
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { updatePreferences } from '../api/preferences'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { usePushPermission } from '@/features/pwa/hooks/usePushPermission'
 import { usePushSubscription } from '@/features/pwa/hooks/usePushSubscription'
 import { NotificationsDeniedBadge } from '@/features/pwa/components/EnableNotificationsCTA'
@@ -55,6 +58,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { permission, request: requestPermission } = usePushPermission()
   const { isSubscribed, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const currentTheme = (user?.theme as Theme | undefined) ?? 'auto'
   const currentAccent = (user?.accentColor as AccentColor | undefined) ?? 'sage'
@@ -75,6 +79,7 @@ export function SettingsPage() {
   }
 
   async function handleLogout() {
+    setShowLogoutConfirm(false)
     await logout()
     navigate('/welcome')
   }
@@ -272,12 +277,24 @@ export function SettingsPage() {
         {/* ── Cerrar sesión ─────────────────────────────────────────────── */}
         <button
           type="button"
-          onClick={() => void handleLogout()}
-          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors"
+          onClick={() => setShowLogoutConfirm(true)}
+          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors focus-visible:ring-2 focus-visible:ring-red-500"
         >
           Cerrar sesión
         </button>
       </main>
+
+      {/* Confirm logout dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="¿Cerrar sesión?"
+        description="Se cerrará tu sesión en este dispositivo. Podrás volver a iniciar sesión en cualquier momento."
+        confirmLabel="Cerrar sesión"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => void handleLogout()}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
 
       <BottomNav />
     </div>

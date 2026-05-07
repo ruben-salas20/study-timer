@@ -1,6 +1,7 @@
 // ChallengeDetailPage.tsx — Detail view for a single challenge at /challenges/:id
 // Renders type-specific visualizations + prizes + actions.
 import { useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useChallenge, useLeaveChallenge, useCancelChallenge } from '../hooks/useChallenges'
 import { useChallengeParticipantSessions } from '../hooks/useChallengeParticipantSessions'
@@ -10,6 +11,7 @@ import { DuelHeadToHead } from '../components/DuelHeadToHead'
 import { GroupStreakCalendar } from '../components/GroupStreakCalendar'
 import { PrizeDisplay } from '../components/PrizeDisplay'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import pb from '@/shared/pb'
 import type { Participant, Challenge } from '../lib/aggregators'
 import type { ChallengeRecord } from '../api/challenges'
@@ -71,6 +73,8 @@ export function ChallengeDetailPage() {
   const { data: challenge, isLoading, error } = useChallenge(id ?? '')
   const leaveMutation = useLeaveChallenge()
   const cancelMutation = useCancelChallenge()
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   if (isLoading) {
     return (
@@ -230,9 +234,9 @@ export function ChallengeDetailPage() {
           {canCancel && (
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={() => setShowCancelConfirm(true)}
               disabled={cancelMutation.isPending}
-              className="w-full py-3 rounded-xl border border-red-500/50 text-red-400 text-sm font-medium disabled:opacity-40"
+              className="w-full py-3 rounded-xl border border-red-500/50 text-red-400 text-sm font-medium disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-red-500"
             >
               {cancelMutation.isPending ? 'Cancelando...' : 'Cancelar reto'}
             </button>
@@ -240,15 +244,45 @@ export function ChallengeDetailPage() {
           {canLeave && (
             <button
               type="button"
-              onClick={handleLeave}
+              onClick={() => setShowLeaveConfirm(true)}
               disabled={leaveMutation.isPending}
-              className="w-full py-3 rounded-xl border border-white/20 text-sm font-medium opacity-60 disabled:opacity-40"
+              className="w-full py-3 rounded-xl border border-white/20 text-sm font-medium opacity-60 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-(--color-primary)"
             >
               {leaveMutation.isPending ? 'Saliendo...' : 'Salir del reto'}
             </button>
           )}
         </section>
       </main>
+
+      {/* Leave challenge confirm */}
+      <ConfirmDialog
+        isOpen={showLeaveConfirm}
+        title="¿Salir del reto?"
+        description="Tu progreso en este reto se conservará pero ya no participarás."
+        confirmLabel="Salir"
+        cancelLabel="Quedarse"
+        variant="danger"
+        onConfirm={() => {
+          setShowLeaveConfirm(false)
+          void handleLeave()
+        }}
+        onCancel={() => setShowLeaveConfirm(false)}
+      />
+
+      {/* Cancel challenge confirm */}
+      <ConfirmDialog
+        isOpen={showCancelConfirm}
+        title="¿Cancelar el reto?"
+        description="Esta acción cancelará el reto para todos los participantes. No se puede deshacer."
+        confirmLabel="Cancelar reto"
+        cancelLabel="Mantener"
+        variant="danger"
+        onConfirm={() => {
+          setShowCancelConfirm(false)
+          void handleCancel()
+        }}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
 
       <BottomNav />
     </div>

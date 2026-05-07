@@ -1,12 +1,14 @@
 // StatsPage.tsx — Main stats screen at /stats
 // Sections: StreakHero, 4 MetricTiles, DayBarChart (14 days), ModeBreakdown.
-// Shows empty state when no sessions yet.
+// Shows empty state when no sessions yet. F8: Skeleton loading states.
 import { useStats } from '../hooks/useStats'
 import { StreakHero } from '../components/StreakHero'
 import { MetricTile } from '../components/MetricTile'
 import { DayBarChart } from '../components/DayBarChart'
 import { ModeBreakdown } from '../components/ModeBreakdown'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { Skeleton } from '@/shared/ui/Skeleton'
+import { EmptyState } from '@/shared/ui/EmptyState'
 import pb from '@/shared/pb'
 
 export function StatsPage() {
@@ -23,17 +25,27 @@ export function StatsPage() {
       <main className="flex flex-col flex-1 px-6 pb-24 gap-6 overflow-y-auto">
 
         {stats.isLoading && (
-          <p className="text-sm opacity-50 text-center py-8">Cargando estadísticas...</p>
+          <div className="flex flex-col gap-4">
+            {/* Hero skeleton */}
+            <Skeleton height="7rem" />
+            {/* Metric tiles skeleton */}
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton height="5rem" />
+              <Skeleton height="5rem" />
+              <Skeleton height="5rem" />
+              <Skeleton height="5rem" />
+            </div>
+            {/* Chart skeleton */}
+            <Skeleton height="8rem" />
+          </div>
         )}
 
         {!stats.isLoading && stats.isEmpty && (
-          <div className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-5xl">📊</p>
-            <p className="text-base font-medium">Aún sin estadísticas</p>
-            <p className="text-sm opacity-50">
-              Empezá un timer y aparecerán tus stats
-            </p>
-          </div>
+          <EmptyState
+            icon="📊"
+            title="Aún sin estadísticas"
+            description="Empezá un timer y aparecerán tus stats aquí"
+          />
         )}
 
         {!stats.isEmpty && (

@@ -1,11 +1,13 @@
 // ChallengesPage.tsx — Main challenges screen at /challenges
 // Sections: active, pending, completed/cancelled (last 10).
-// FAB to create a new challenge.
+// F8: EmptyState + Skeleton loading states.
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { useMyChallenges } from '../hooks/useChallenges'
 import { ChallengeCard } from '../components/ChallengeCard'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { Skeleton } from '@/shared/ui/Skeleton'
 import type { ChallengeRecord } from '../api/challenges'
 
 export function ChallengesPage() {
@@ -42,12 +44,17 @@ export function ChallengesPage() {
 
       <main className="flex flex-col flex-1 px-6 pb-24 gap-6 overflow-y-auto">
 
+        {/* ── Loading skeleton ──────────────────────────────────────────── */}
         {isLoading && (
-          <p className="text-sm opacity-50 text-center py-8">Cargando retos...</p>
+          <div className="flex flex-col gap-3">
+            <Skeleton height="5rem" />
+            <Skeleton height="5rem" />
+            <Skeleton height="5rem" />
+          </div>
         )}
 
         {/* ── Activos ─────────────────────────────────────────────────── */}
-        {active.length > 0 && (
+        {!isLoading && active.length > 0 && (
           <section>
             <h2 className="text-xs uppercase tracking-widest opacity-50 mb-3">Activos</h2>
             <div className="flex flex-col gap-2">
@@ -59,7 +66,7 @@ export function ChallengesPage() {
         )}
 
         {/* ── Pendientes ───────────────────────────────────────────────── */}
-        {pending.length > 0 && (
+        {!isLoading && pending.length > 0 && (
           <section>
             <h2 className="text-xs uppercase tracking-widest opacity-50 mb-3">Pendientes</h2>
             <div className="flex flex-col gap-2">
@@ -71,7 +78,7 @@ export function ChallengesPage() {
         )}
 
         {/* ── Finalizados ──────────────────────────────────────────────── */}
-        {finished.length > 0 && (
+        {!isLoading && finished.length > 0 && (
           <section>
             <h2 className="text-xs uppercase tracking-widest opacity-50 mb-3">Finalizados</h2>
             <div className="flex flex-col gap-2">
@@ -84,23 +91,26 @@ export function ChallengesPage() {
 
         {/* ── Empty state ───────────────────────────────────────────────── */}
         {!isLoading && challenges.length === 0 && (
-          <div className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-4xl">🏆</p>
-            <p className="text-sm opacity-50">Aún no tienes retos</p>
-            <Link
-              to="/challenges/new"
-              className="text-sm text-(--color-primary) font-medium"
-            >
-              Crear tu primer reto →
-            </Link>
-          </div>
+          <EmptyState
+            icon="🏆"
+            title="No hay retos activos"
+            description="Creá un reto y compite con tus amigos"
+            action={
+              <Link
+                to="/challenges/new"
+                className="text-sm text-(--color-primary) font-medium"
+              >
+                Crear tu primer reto →
+              </Link>
+            }
+          />
         )}
       </main>
 
       {/* FAB */}
       <Link
         to="/challenges/new"
-        className="fixed bottom-20 right-6 flex items-center justify-center w-14 h-14 rounded-full bg-(--color-primary) text-white shadow-lg"
+        className="fixed bottom-20 right-6 flex items-center justify-center w-14 h-14 rounded-full bg-(--color-primary) text-white shadow-lg focus-visible:ring-2 focus-visible:ring-(--color-primary)"
         aria-label="Crear reto"
       >
         <Plus size={24} />

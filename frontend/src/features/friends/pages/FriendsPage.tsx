@@ -1,7 +1,9 @@
 // FriendsPage.tsx — Main friends screen at /friends
 // Sections: weekly ranking, incoming requests, accepted friends list.
+// F8: EmptyState, Skeleton loading, ConfirmDialog for remove.
 import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
+import { useState } from 'react'
 import { useWeeklyRanking } from '../hooks/useWeeklyRanking'
 import {
   useFriendsList,
@@ -14,15 +16,25 @@ import { RankingRow } from '../components/RankingRow'
 import { FriendListItem } from '../components/FriendListItem'
 import { PendingRequestRow } from '../components/PendingRequestRow'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { EmptyState } from '@/shared/ui/EmptyState'
+import { Skeleton } from '@/shared/ui/Skeleton'
+import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 
 export function FriendsPage() {
   const { ranking } = useWeeklyRanking()
-  const { data: friends = [] } = useFriendsList()
+  const { data: friends = [], isLoading: friendsLoading } = useFriendsList()
   const { data: incoming = [] } = useIncomingRequests()
 
   const acceptMutation = useAcceptFriendRequest()
   const rejectMutation = useRejectFriendRequest()
   const removeMutation = useRemoveFriend()
+
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  function handleRemoveConfirm() {
+    if (!removingId) return
+    void removeMutation.mutateAsync(removingId).finally(() => setRemovingId(null))
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -31,7 +43,7 @@ export function FriendsPage() {
         <h1 className="text-2xl font-bold">Amigos</h1>
         <Link
           to="/friends/add"
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-(--color-primary) text-white"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-(--color-primary) text-white focus-visible:ring-2 focus-visible:ring-(--color-primary)"
           aria-label="Agregar amigo"
         >
           <UserPlus size={18} />
@@ -92,23 +104,33 @@ export function FriendsPage() {
             Mis amigos ({friends.length})
           </h2>
 
-          {friends.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <p className="text-sm opacity-50">Aún no tienes amigos</p>
-              <Link
-                to="/friends/add"
-                className="text-sm text-(--color-primary) font-medium"
-              >
-                Agregar por código →
-              </Link>
+          {friendsLoading ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton height="3rem" />
+              <Skeleton height="3rem" />
+              <Skeleton height="3rem" />
             </div>
+          ) : friends.length === 0 ? (
+            <EmptyState
+              icon="👋"
+              title="Aún no tenés amigos"
+              description="Compartí tu código para conectar con otros estudiantes"
+              action={
+                <Link
+                  to="/friends/add"
+                  className="text-sm text-(--color-primary) font-medium"
+                >
+                  Agregar por código →
+                </Link>
+              }
+            />
           ) : (
             <div className="flex flex-col gap-2">
               {friends.map((entry) => (
                 <FriendListItem
                   key={entry.friendshipId}
                   entry={entry}
-                  onRemove={(id) => void removeMutation.mutateAsync(id)}
+                  onRemove={(id) => setRemovingId(id)}
                   isRemoving={
                     removeMutation.isPending &&
                     removeMutation.variables === entry.friendshipId
@@ -119,6 +141,18 @@ export function FriendsPage() {
           )}
         </section>
       </main>
+
+      {/* Confirm remove friend dialog */}
+      <ConfirmDialog
+        isOpen={removingId !== null}
+        title="¿Eliminar amigo?"
+        description="Esta acción eliminará la amistad. Podrás volver a agregar a esta persona más adelante."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={handleRemoveConfirm}
+        onCancel={() => setRemovingId(null)}
+      />
 
       <BottomNav />
     </div>
