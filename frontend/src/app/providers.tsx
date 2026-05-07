@@ -1,7 +1,10 @@
 // providers.tsx — global provider composition
-// TanStack Query client wraps the entire tree
-// Additional providers (React Router, etc.) will be added in F1
+// Wraps the app with:
+//   - BrowserRouter (React Router)
+//   - QueryClientProvider (TanStack Query)
+// ThemeEffect is added here in T24 (F1 theme wiring)
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -21,7 +24,9 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <BrowserRouter>
+        {children}
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
