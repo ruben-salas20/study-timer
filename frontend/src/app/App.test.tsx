@@ -18,7 +18,6 @@ describe('App', () => {
 
   it('shows tagline text', () => {
     render(<App />)
-    // Additional behavioral assertion — triangulation
-    expect(screen.getByText(/study timer/i)).toBeInTheDocument()
+    expect(screen.getByText(/competitive study timer for friends/i)).toBeInTheDocument()
   })
 })
