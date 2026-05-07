@@ -1,6 +1,6 @@
 // routes.tsx — Full application routing
 // Public routes: /welcome, /register, /login
-// Protected routes (RequireAuth): /home, /onboarding/*, /settings, /timer/active, /friends, /challenges, /stats
+// Protected routes (RequireAuth): /home, /onboarding/*, /settings, /timer/active, /friends, /friends/add, /challenges, /stats
 // Catch-all: 404
 // BrowserRouter is provided by providers.tsx — do NOT add it here.
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
@@ -12,6 +12,8 @@ import { HomeTimerPage } from '@/features/timer/pages/HomeTimerPage'
 import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import { FriendsPage } from '@/features/friends/pages/FriendsPage'
+import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
 
 /** Simple placeholder for routes not yet implemented */
 function Placeholder({ name }: { name: string }) {
@@ -95,7 +97,15 @@ export function AppRoutes() {
         path="/friends"
         element={
           <RequireAuth>
-            <Placeholder name="Amigos" />
+            <FriendsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/friends/add"
+        element={
+          <RequireAuth>
+            <AddFriendPage />
           </RequireAuth>
         }
       />

@@ -4,14 +4,15 @@
 // Config modal appears inline after tile selection.
 // Stats strip: today's study time + week progress toward weeklyGoalMinutes.
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Timer, Clock, RotateCcw, Home, Users, Trophy, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Timer, Clock, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useTimer } from '../hooks/useTimer'
 import { ModeCard } from '../components/ModeCard'
 import { PomodoroConfigForm } from '../components/PomodoroConfigForm'
 import { CountdownConfigForm } from '../components/CountdownConfigForm'
 import { useTodayStats } from '../hooks/useTodayStats'
+import { BottomNav } from '@/shared/ui/BottomNav'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
@@ -162,32 +163,7 @@ export function HomeTimerPage() {
         )}
       </main>
 
-      {/* Bottom nav (F2 — only Inicio active) */}
-      <nav
-        className="flex items-center justify-around border-t border-current/10 bg-background px-2 pb-safe pt-3"
-        aria-label="Navegación principal"
-      >
-        <Link
-          to="/home"
-          className="flex flex-col items-center gap-1 text-(--color-primary)"
-          aria-current="page"
-        >
-          <Home size={22} />
-          <span className="text-[10px]">Inicio</span>
-        </Link>
-        <span className="flex flex-col items-center gap-1 opacity-30 pointer-events-none">
-          <Users size={22} />
-          <span className="text-[10px]">Amigos</span>
-        </span>
-        <span className="flex flex-col items-center gap-1 opacity-30 pointer-events-none">
-          <Trophy size={22} />
-          <span className="text-[10px]">Retos</span>
-        </span>
-        <Link to="/settings" className="flex flex-col items-center gap-1 opacity-50">
-          <User size={22} />
-          <span className="text-[10px]">Yo</span>
-        </Link>
-      </nav>
+      <BottomNav />
     </div>
   )
 }
