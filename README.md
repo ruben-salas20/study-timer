@@ -106,6 +106,129 @@ study-timer/
 
 ---
 
+## Deploy a producción
+
+### Prerequisites
+
+- VPS with Ubuntu 22.04 LTS (Hostinger or equivalent)
+- A subdomain or custom domain with an **A record pointing to the VPS IP**
+- SSH access to the VPS
+
+### Step-by-step
+
+#### 1. Bootstrap the VPS (run once)
+
+SSH into your VPS and run the bootstrap script. It installs Docker, clones the
+repo, and prepares the environment:
+
+```bash
+# On the VPS:
+wget -qO - https://raw.githubusercontent.com/ruben-salas20/study-timer/main/scripts/vps-bootstrap.sh | bash
+```
+
+Or clone manually and run it:
+
+```bash
+git clone https://github.com/ruben-salas20/study-timer.git ~/study-timer
+chmod +x ~/study-timer/scripts/*.sh
+~/study-timer/scripts/vps-bootstrap.sh
+```
+
+After the script finishes, **log out and back in** so the docker group applies.
+
+#### 2. Generate VAPID keys
+
+```bash
+docker run --rm node:20-alpine sh -c 'npx --yes web-push generate-vapid-keys'
+```
+
+Note down the **Public Key** and **Private Key**.
+
+#### 3. Edit `.env`
+
+```bash
+cd ~/study-timer
+nano .env
+```
+
+Set these values (minimum required for production):
+
+| Variable | Example | Notes |
+|----------|---------|-------|
+| `DOMAIN` | `timer.yourdomain.com` | Must match the DNS A record |
+| `VAPID_PUBLIC_KEY` | `BExamplePublicKey...` | From step 2 |
+| `VAPID_PRIVATE_KEY` | `secret...` | From step 2 — never share |
+| `VAPID_SUBJECT` | `mailto:you@example.com` | Your email or app URL |
+| `VITE_VAPID_PUBLIC_KEY` | same as `VAPID_PUBLIC_KEY` | Used at frontend build time |
+| `PUSH_SERVICE_TOKEN` | `openssl rand -hex 32` | Shared secret, any random 32-byte hex |
+
+#### 4. Deploy
+
+```bash
+cd ~/study-timer
+./scripts/deploy.sh
+```
+
+The script:
+1. Validates `.env` has all required vars
+2. Pulls the latest code from `origin/main`
+3. Builds all Docker images (frontend multi-stage build + PocketBase + push-service)
+4. Starts containers with `docker compose -f docker-compose.prod.yml up -d`
+5. Tails Caddy logs to confirm TLS certificate acquisition
+
+> First deploy: Caddy requests a Let's Encrypt TLS certificate. This can take
+> 30–60 seconds. If you see a TLS error immediately after deploy, wait one minute
+> and refresh.
+
+#### 5. Create the PocketBase admin account
+
+Open `https://your-domain/_/` in a browser and create the first admin account.
+
+Then generate a PocketBase API token under **Settings → API tokens** and add it
+to `.env` as `POCKETBASE_ADMIN_TOKEN`. Re-run `./scripts/deploy.sh` to apply.
+
+#### 6. Set up automatic backups (optional but recommended)
+
+The backup script creates daily tarballs of `pb_data` and retains 14 days:
+
+```bash
+crontab -e
+# Add this line (adjust the path if your repo is not at ~/study-timer):
+0 3 * * * /home/USER/study-timer/scripts/backup.sh >> /home/USER/study-timer/logs/backup.log 2>&1
+```
+
+### Re-deploying after code changes
+
+```bash
+cd ~/study-timer
+./scripts/deploy.sh
+```
+
+The deploy script always pulls latest code and rebuilds images.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| TLS error after first deploy | Cert not yet issued | Wait 60 s and refresh |
+| `Permission denied` running docker | docker group not active | Log out and back in |
+| `.env` validation fails | Missing required var | Check error output and edit `.env` |
+| PocketBase not accessible | Container not started | `docker compose -f docker-compose.prod.yml ps` |
+| Push notifications not delivered | VAPID mismatch or token wrong | Check `VITE_VAPID_PUBLIC_KEY` matches `VAPID_PUBLIC_KEY` |
+
+### Scripts reference
+
+| Script | When to run | What it does |
+|--------|-------------|--------------|
+| `scripts/vps-bootstrap.sh` | Once on fresh VPS | Installs Docker, clones repo, creates `.env` |
+| `scripts/deploy.sh` | Every deploy | Pulls, builds, restarts containers |
+| `scripts/backup.sh` | Via cron daily | Tarballs `pb_data`, retains last 14 days |
+
+> After cloning on a new machine, make scripts executable:
+> `chmod +x scripts/*.sh`
+
+---
+
 ## Common commands
 
 Run these from the `frontend/` directory unless noted otherwise.
@@ -127,14 +250,14 @@ Run these from the `frontend/` directory unless noted otherwise.
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **F0 — Foundation** | Repo scaffold, Vite + React + TS, Tailwind v4, PocketBase Docker, dev compose | In progress |
-| **F1 — Auth + onboarding** | Registration, login, friendCode, theme/accent | Pending |
-| **F2 — Timer + sessions** | 3 timer modes, persistence, history | Pending |
-| **F3 — Friends** | Add by code, list, accept | Pending |
-| **F4 — Challenges** | 4 types, live progress | Pending |
-| **F5 — Stats + profile** | Aggregated stats, settings | Pending |
-| **F6 — PWA + push** | Manifest, service worker, VAPID notifications | Pending |
-| **F7 — Production deploy** | VPS, Caddy, domain, backups | Pending |
+| **F0 — Foundation** | Repo scaffold, Vite + React + TS, Tailwind v4, PocketBase Docker, dev compose | Done |
+| **F1 — Auth + onboarding** | Registration, login, friendCode, theme/accent | Done |
+| **F2 — Timer + sessions** | 3 timer modes, persistence, history | Done |
+| **F3 — Friends** | Add by code, list, accept | Done |
+| **F4 — Challenges** | 4 types, live progress | Done |
+| **F5 — Stats + profile** | Aggregated stats, settings | Done |
+| **F6 — PWA + push** | Manifest, service worker, VAPID notifications | Done |
+| **F7 — Production deploy** | VPS, Caddy, domain, backups | Done |
 | **F8 — Polish** | Micro-interactions, empty/error states, animations | Pending |
 
 See [ARCHITECTURE.md §9](./ARCHITECTURE.md) for the full roadmap and per-phase delivery criteria.
