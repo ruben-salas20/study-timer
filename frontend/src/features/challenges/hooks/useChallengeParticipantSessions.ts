@@ -20,7 +20,7 @@ async function fetchSessionDays(userId: string): Promise<string[]> {
     sort: '-startedAt',
   })
 
-  const days = (result.items as Array<{ user: string; startedAt: string }>).map(
+  const days = (result.items as unknown as Array<{ user: string; startedAt: string }>).map(
     (item) => toUtcDay(item.startedAt)
   )
 
