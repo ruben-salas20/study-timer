@@ -1,7 +1,8 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// Top-level log to confirm file is loaded into JSVM
-console.log("[on-user-create.js] file loaded by PB JSVM");
+// Use $app.logger at module-level + inside hooks. Goja JSVM eagerly loads
+// hook files at boot, so this top-level call should appear in the log.
+$app.logger().info("[on-user-create.js] LOADED at module init");
 
 const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -13,9 +14,8 @@ function generateCode() {
   return s;
 }
 
-// Try filtered version first
 onRecordCreate((e) => {
-  console.log("[hook] onRecordCreate fired for users — email:", e.record.get("email"));
+  $app.logger().info("[hook] onRecordCreate fired for users", "email", e.record.get("email"));
 
   if (!e.record.get("weeklyGoalMinutes")) e.record.set("weeklyGoalMinutes", 600);
   if (!e.record.get("timezone")) e.record.set("timezone", "America/Argentina/Buenos_Aires");
@@ -25,16 +25,8 @@ onRecordCreate((e) => {
   if (!e.record.get("friendCode")) {
     const code = generateCode();
     e.record.set("friendCode", code);
-    console.log("[hook] friendCode generated:", code);
+    $app.logger().info("[hook] friendCode generated", "code", code);
   }
 
   e.next();
 }, "users");
-
-// Also bind without filter to detect if filter is the issue
-onRecordCreate((e) => {
-  if (e.record.collection() && e.record.collection().name === "users") {
-    console.log("[hook UNFILTERED] caught users create — email:", e.record.get("email"));
-  }
-  e.next();
-});
