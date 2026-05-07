@@ -29,6 +29,18 @@ import { createHandlerBoundToURL } from 'workbox-precaching'
 
 declare const self: ServiceWorkerGlobalScope
 
+// ── Update lifecycle: take control of clients ASAP ───────────────────────────
+// Without these, new SW versions sit "waiting" until every tab is closed —
+// painful on mobile PWAs where the user has to fully force-quit the app for
+// updates to apply. With skipWaiting + clientsClaim, the new SW takes over
+// immediately on the next reload.
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 // ── Precaching ───────────────────────────────────────────────────────────────
 
 // self.__WB_MANIFEST is replaced at build time by vite-plugin-pwa
