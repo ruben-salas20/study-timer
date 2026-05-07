@@ -1,5 +1,5 @@
 // pb_hooks/on-user-create.js
-// Fires on the HTTP create-user request, BEFORE validation runs.
+// Fires when a new user record is being created (model-layer hook).
 //
 // Responsibilities:
 //   1. Auto-generate a unique 6-character uppercase alphanumeric friendCode
@@ -7,11 +7,12 @@
 //   2. Retry on collision up to MAX_RETRIES times before failing.
 //   3. Set timezone, weeklyGoalMinutes, theme, accentColor defaults if missing.
 //
-// Why onRecordCreateRequest (not onRecordCreate):
-//   onRecordCreate runs AFTER the validation pipeline. friendCode is `required`
-//   in the schema, so validation rejects the request before the hook can set
-//   the field. onRecordCreateRequest runs BEFORE validation, mutates e.record,
-//   and validation then sees the populated value.
+// Note on hook choice:
+//   Migration 002 made friendCode optional at the schema level so that the
+//   timing of validation vs. hook execution does not matter. We use
+//   onRecordCreate (model lifecycle) which fires for ANY user creation —
+//   HTTP API, admin UI, or programmatic — making this the canonical place
+//   to enforce the invariant.
 //
 // Reference: ARCHITECTURE.md §6.1 + tasks T05
 
@@ -25,7 +26,7 @@ function generateCode() {
   return $security.randomStringWithAlphabet(CODE_LEN, CHARS);
 }
 
-onRecordCreateRequest((e) => {
+onRecordCreate((e) => {
   // Defaults for optional profile fields
   if (!e.record.get("weeklyGoalMinutes")) {
     e.record.set("weeklyGoalMinutes", 600);
@@ -40,7 +41,7 @@ onRecordCreateRequest((e) => {
     e.record.set("accentColor", "sage");
   }
 
-  // Generate friendCode if not already provided by the client
+  // Generate friendCode if not already provided
   const existingCode = e.record.get("friendCode");
   if (!existingCode || String(existingCode).trim() === "") {
     let code = "";
