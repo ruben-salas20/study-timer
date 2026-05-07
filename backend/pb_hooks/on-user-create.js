@@ -1,15 +1,17 @@
 // pb_hooks/on-user-create.js
-// Fires before a new user record is created in the "users" auth collection.
+// Fires on the HTTP create-user request, BEFORE validation runs.
 //
 // Responsibilities:
 //   1. Auto-generate a unique 6-character uppercase alphanumeric friendCode
 //      if the record does not already have one set.
 //   2. Retry on collision up to MAX_RETRIES times before failing.
-//   3. Set timezone and weeklyGoalMinutes defaults if missing.
+//   3. Set timezone, weeklyGoalMinutes, theme, accentColor defaults if missing.
 //
-// PocketBase 0.23.x hook API:
-//   onRecordCreate(handler, ...collections) — new hook name in 0.23.x
-//   handler receives (e) where e.record is the record, e.app is the app
+// Why onRecordCreateRequest (not onRecordCreate):
+//   onRecordCreate runs AFTER the validation pipeline. friendCode is `required`
+//   in the schema, so validation rejects the request before the hook can set
+//   the field. onRecordCreateRequest runs BEFORE validation, mutates e.record,
+//   and validation then sees the populated value.
 //
 // Reference: ARCHITECTURE.md §6.1 + tasks T05
 
@@ -19,22 +21,12 @@ const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const CODE_LEN = 6;
 const MAX_RETRIES = 5;
 
-/**
- * Generate a random 6-character uppercase alphanumeric string.
- * Uses $security.randomStringWithAlphabet for cryptographic randomness.
- */
 function generateCode() {
   return $security.randomStringWithAlphabet(CODE_LEN, CHARS);
 }
 
-onRecordCreate((e) => {
-  // Only process the "users" collection
-  if (e.record.collection().name !== "users") {
-    e.next();
-    return;
-  }
-
-  // Set defaults for optional fields if not provided
+onRecordCreateRequest((e) => {
+  // Defaults for optional profile fields
   if (!e.record.get("weeklyGoalMinutes")) {
     e.record.set("weeklyGoalMinutes", 600);
   }
@@ -48,9 +40,9 @@ onRecordCreate((e) => {
     e.record.set("accentColor", "sage");
   }
 
-  // Generate friendCode if not already set
+  // Generate friendCode if not already provided by the client
   const existingCode = e.record.get("friendCode");
-  if (!existingCode || existingCode.trim() === "") {
+  if (!existingCode || String(existingCode).trim() === "") {
     let code = "";
     let attempts = 0;
     let found = false;
@@ -59,16 +51,15 @@ onRecordCreate((e) => {
       code = generateCode();
       attempts++;
 
-      // Check for collision against existing records
       try {
         e.app.findFirstRecordByFilter(
           "users",
           `friendCode = {:code}`,
           { code: code }
         );
-        // Record exists → collision, try again
+        // record exists → collision, retry
       } catch (_) {
-        // findFirstRecordByFilter throws when not found → code is unique
+        // not found → unique
         found = true;
         break;
       }
@@ -84,4 +75,4 @@ onRecordCreate((e) => {
   }
 
   e.next();
-});
+}, "users");
