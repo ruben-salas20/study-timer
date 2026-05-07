@@ -4,7 +4,8 @@
 //   /settings, /timer/active, /friends, /friends/add, /challenges
 // Catch-all: 404
 // BrowserRouter is provided by providers.tsx — do NOT add it here.
-import { Routes, Route, Navigate, Link } from 'react-router-dom'
+// F8: page-enter animation keyed on location for subtle 100ms fade transition.
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { WelcomePage } from '@/features/auth/pages/WelcomePage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
@@ -38,7 +39,9 @@ function NotFound() {
  * Import and use in App.tsx.
  */
 export function AppRoutes() {
+  const location = useLocation()
   return (
+    <div key={location.pathname} className="page-enter">
     <Routes>
       {/* Root redirect */}
       <Route path="/" element={<Navigate to="/welcome" replace />} />
@@ -159,5 +162,6 @@ export function AppRoutes() {
       {/* 404 catch-all */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </div>
   )
 }
