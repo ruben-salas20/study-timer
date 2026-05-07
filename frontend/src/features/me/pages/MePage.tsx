@@ -1,10 +1,11 @@
 // MePage.tsx — "Yo" hub screen at /me (and the BottomNav "Yo" tab entry)
 // Shows avatar, displayName, friendCode, then nav cards for Stats/Profile/Settings.
-// Also has a logout button.
+// F6: adds EnableNotificationsCTA + install app hint.
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart2, User, Settings } from 'lucide-react'
+import { BarChart2, User, Settings, Download } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
 
 function getInitials(name: string): string {
   return name
@@ -91,6 +92,23 @@ export function MePage() {
             </Link>
           ))}
         </div>
+
+        {/* ── Notificaciones CTA (F6) ─────────────────────────────── */}
+        <EnableNotificationsCTA />
+
+        {/* ── Instalar app (F6) ───────────────────────────────────── */}
+        <Link
+          to="/settings"
+          className="flex items-center gap-3 rounded-xl border border-current/15 px-4 py-3 hover:border-(--color-primary)/40 transition-colors"
+          aria-label="Instalar aplicación"
+        >
+          <span className="text-(--color-primary)"><Download size={20} /></span>
+          <div className="flex flex-col">
+            <span className="font-semibold text-sm">Instalar app</span>
+            <span className="text-xs opacity-50">Accedé desde tu pantalla de inicio</span>
+          </div>
+          <span className="ml-auto opacity-30 text-sm">→</span>
+        </Link>
 
         {/* ── Logout ───────────────────────────────────────────────── */}
         <button

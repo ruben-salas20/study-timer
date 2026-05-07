@@ -1,9 +1,12 @@
-// SettingsPage.tsx — F5 implementation
-// Theme, accent, timezone, focus mode toggle, about section, logout.
+// SettingsPage.tsx — F5/F6 implementation
+// Theme, accent, timezone, focus mode toggle, notifications (F6), about, logout.
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { updatePreferences } from '../api/preferences'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { usePushPermission } from '@/features/pwa/hooks/usePushPermission'
+import { usePushSubscription } from '@/features/pwa/hooks/usePushSubscription'
+import { NotificationsDeniedBadge } from '@/features/pwa/components/EnableNotificationsCTA'
 
 type Theme = 'auto' | 'light' | 'dark'
 type AccentColor = 'sage' | 'blue' | 'warm' | 'mono'
@@ -50,6 +53,8 @@ const APP_VERSION = __APP_VERSION__
 export function SettingsPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { permission, request: requestPermission } = usePushPermission()
+  const { isSubscribed, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
 
   const currentTheme = (user?.theme as Theme | undefined) ?? 'auto'
   const currentAccent = (user?.accentColor as AccentColor | undefined) ?? 'sage'
@@ -160,6 +165,89 @@ export function SettingsPage() {
               <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-background" />
             </div>
           </div>
+        </section>
+
+        {/* ── Notificaciones ───────────────────────────────────────────── */}
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+            Notificaciones
+          </p>
+
+          {permission === 'denied' ? (
+            <NotificationsDeniedBadge />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {/* Permission status */}
+              <div className="flex items-center justify-between text-sm">
+                <span className="opacity-60">Estado</span>
+                <span
+                  className={[
+                    'text-xs font-semibold px-2 py-0.5 rounded-full',
+                    permission === 'granted'
+                      ? 'bg-green-500/15 text-green-600'
+                      : 'bg-current/10 opacity-60',
+                  ].join(' ')}
+                >
+                  {permission === 'granted' ? 'Permitido' : 'No configurado'}
+                </span>
+              </div>
+
+              {/* Subscribe / unsubscribe toggle */}
+              {permission === 'granted' ? (
+                <div className="flex items-center justify-between rounded-xl border border-current/20 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">Push activado</p>
+                    <p className="text-xs opacity-50 mt-0.5">
+                      {isSubscribed ? 'Recibirás notificaciones' : 'Sin suscripción activa'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={pushLoading}
+                    onClick={() => void (isSubscribed ? unsubscribe() : subscribe())}
+                    className={[
+                      'text-xs font-semibold transition-colors',
+                      isSubscribed ? 'text-red-500' : 'text-(--color-primary)',
+                      pushLoading ? 'opacity-40' : '',
+                    ].join(' ')}
+                  >
+                    {pushLoading ? '...' : isSubscribed ? 'Desactivar' : 'Activar'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void requestPermission()}
+                  className="w-full py-2.5 rounded-xl border border-(--color-primary)/40 text-(--color-primary) text-sm font-semibold hover:bg-(--color-primary)/10 transition-colors"
+                >
+                  Permitir notificaciones
+                </button>
+              )}
+
+              {/* Test notification — only when subscribed */}
+              {permission === 'granted' && isSubscribed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if ('serviceWorker' in navigator) {
+                      navigator.serviceWorker.ready
+                        .then((reg) =>
+                          reg.showNotification('Study Timer — prueba', {
+                            body: 'Las notificaciones funcionan correctamente',
+                            icon: '/icons/icon-192x192.png',
+                            tag: 'test-notification',
+                          })
+                        )
+                        .catch(console.error)
+                    }
+                  }}
+                  className="text-xs text-(--color-primary) opacity-70 hover:opacity-100 transition-opacity text-left"
+                >
+                  Enviar notificación de prueba →
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* ── Acerca de ─────────────────────────────────────────────────── */}

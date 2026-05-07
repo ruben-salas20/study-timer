@@ -3,11 +3,13 @@
 //   - BrowserRouter (React Router)
 //   - QueryClientProvider (TanStack Query)
 //   - ThemeEffect: reads user.theme + user.accentColor → sets data-theme/data-accent on <html>
+//   - InstallPrompt: PWA install banner (F6) — renders conditionally at app shell level
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import pb from '@/shared/pb'
+import { InstallPrompt } from '@/features/pwa/components/InstallPrompt'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +59,8 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeEffect />
+        {/* InstallPrompt renders a fixed banner when the app is installable */}
+        <InstallPrompt />
         {children}
       </BrowserRouter>
     </QueryClientProvider>
