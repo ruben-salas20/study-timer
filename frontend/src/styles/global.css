@@ -1,0 +1,38 @@
+/* Tailwind CSS v4 — no tailwind.config.ts; all configuration is done here */
+/* Import Tailwind base styles */
+@import "tailwindcss";
+
+/* Custom design tokens via @theme */
+/* Sage accent palette — matches ARCHITECTURE.md accent color "sage" */
+@theme {
+  /* Sage green accent */
+  --color-sage-50: oklch(97% 0.02 150);
+  --color-sage-100: oklch(94% 0.04 150);
+  --color-sage-200: oklch(88% 0.07 150);
+  --color-sage-300: oklch(80% 0.10 150);
+  --color-sage-400: oklch(70% 0.12 150);
+  --color-sage-500: oklch(60% 0.13 150);
+  --color-sage-600: oklch(50% 0.12 150);
+  --color-sage-700: oklch(40% 0.10 150);
+  --color-sage-800: oklch(30% 0.08 150);
+  --color-sage-900: oklch(20% 0.05 150);
+
+  /* Semantic tokens */
+  --color-background: var(--color-white);
+  --color-foreground: oklch(15% 0.02 255);
+  --color-primary: var(--color-sage-500);
+  --color-primary-foreground: var(--color-white);
+
+  /* Font */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+
+  /* Border radius */
+  --radius-card: 0.75rem;
+}
+
+/* Light / dark theme via data-theme attribute */
+/* Default is light; set data-theme="dark" on <html> for dark mode */
+[data-theme="dark"] {
+  --color-background: oklch(12% 0.02 255);
+  --color-foreground: oklch(95% 0.01 255);
+}
