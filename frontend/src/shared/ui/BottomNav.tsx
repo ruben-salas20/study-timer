@@ -1,7 +1,7 @@
 // BottomNav.tsx — Shared bottom navigation bar
-// 4 items: Inicio (/home), Amigos (/friends), Retos (/challenges placeholder),
-//          Yo (/settings).
+// 4 items: Inicio (/home), Amigos (/friends), Retos (/challenges), Yo (/me).
 // Active state is determined by the current route path.
+// The "Yo" tab activates for /me, /stats, /profile, and /settings.
 import { Link, useLocation } from 'react-router-dom'
 import { Home, Users, Trophy, User } from 'lucide-react'
 
@@ -11,6 +11,8 @@ interface NavItem {
   label: string
   /** Exact match or prefix match for active state */
   matchPrefix?: boolean
+  /** Additional path prefixes that also activate this tab */
+  alsoMatch?: string[]
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -32,10 +34,11 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: true,
   },
   {
-    to: '/settings',
+    to: '/me',
     icon: <User size={22} />,
     label: 'Yo',
     matchPrefix: true,
+    alsoMatch: ['/stats', '/profile', '/settings'],
   },
 ]
 
@@ -43,15 +46,18 @@ export function BottomNav() {
   const { pathname } = useLocation()
 
   function isActive(item: NavItem): boolean {
-    if (item.matchPrefix) {
-      return pathname.startsWith(item.to)
-    }
-    return pathname === item.to
+    const prefixMatch = item.matchPrefix
+      ? pathname.startsWith(item.to)
+      : pathname === item.to
+
+    if (prefixMatch) return true
+
+    return (item.alsoMatch ?? []).some((prefix) => pathname.startsWith(prefix))
   }
 
   return (
     <nav
-      className="flex items-center justify-around border-t border-current/10 bg-background px-2 pb-safe pt-3"
+      className="fixed bottom-0 inset-x-0 flex items-center justify-around border-t border-current/10 bg-background px-2 pb-safe pt-3"
       aria-label="Navegación principal"
     >
       {NAV_ITEMS.map((item) => {

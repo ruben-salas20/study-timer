@@ -1,6 +1,7 @@
 // routes.tsx — Full application routing
 // Public routes: /welcome, /register, /login
-// Protected routes (RequireAuth): /home, /onboarding/*, /settings, /timer/active, /friends, /friends/add, /challenges, /stats
+// Protected routes (RequireAuth): /home, /onboarding/*, /me, /stats, /profile,
+//   /settings, /timer/active, /friends, /friends/add, /challenges
 // Catch-all: 404
 // BrowserRouter is provided by providers.tsx — do NOT add it here.
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
@@ -11,23 +12,15 @@ import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { HomeTimerPage } from '@/features/timer/pages/HomeTimerPage'
 import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
-import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
 import { ChallengesPage } from '@/features/challenges/pages/ChallengesPage'
 import { NewChallengePage } from '@/features/challenges/pages/NewChallengePage'
 import { ChallengeDetailPage } from '@/features/challenges/pages/ChallengeDetailPage'
-
-/** Simple placeholder for routes not yet implemented */
-function Placeholder({ name }: { name: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground bg-background">
-      <h1 className="text-2xl font-bold">{name}</h1>
-      <p className="opacity-60 text-sm">Coming in a future sprint</p>
-      <Link to="/home" className="text-(--color-primary) text-sm">← Home</Link>
-    </div>
-  )
-}
+import { MePage } from '@/features/me/pages/MePage'
+import { StatsPage } from '@/features/stats/pages/StatsPage'
+import { ProfilePage } from '@/features/profile/pages/ProfilePage'
+import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 
 /** 404 fallback */
 function NotFound() {
@@ -89,14 +82,6 @@ export function AppRoutes() {
         }
       />
       <Route
-        path="/settings"
-        element={
-          <RequireAuth>
-            <SettingsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
         path="/friends"
         element={
           <RequireAuth>
@@ -136,11 +121,37 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
+      {/* F5: Yo section */}
+      <Route
+        path="/me"
+        element={
+          <RequireAuth>
+            <MePage />
+          </RequireAuth>
+        }
+      />
       <Route
         path="/stats"
         element={
           <RequireAuth>
-            <Placeholder name="Stats" />
+            <StatsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth>
+            <ProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
           </RequireAuth>
         }
       />
