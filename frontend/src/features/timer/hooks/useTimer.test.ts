@@ -1,5 +1,6 @@
 // useTimer.test.ts — RED tests for useTimer hook (TDD cycle)
 // Tests the core timer logic: tick behavior, mode transitions, pause/resume, stop.
+// Also tests localStorage rehydration on mount (F8 carry-over).
 // Uses vi.useFakeTimers() to control setInterval ticks deterministically.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
@@ -9,6 +10,7 @@ vi.mock('../api/sessions', () => ({
   createSession: vi.fn().mockResolvedValue('session-test-id'),
   endSession: vi.fn().mockResolvedValue(undefined),
   listMySessions: vi.fn().mockResolvedValue({ items: [] }),
+  getSession: vi.fn().mockResolvedValue(null),
 }))
 
 // Mock PocketBase singleton (needed by the zustand store import chain)
@@ -40,10 +42,13 @@ const localStorageMock = (() => {
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
 describe('useTimer hook', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers()
     localStorageMock.clear()
     vi.clearAllMocks()
+    // Reset zustand store to idle between tests so rehydration guard works correctly
+    const { useTimerStore } = await import('../store')
+    useTimerStore.getState().resetTimer()
   })
 
   afterEach(() => {
@@ -201,6 +206,96 @@ describe('useTimer hook', () => {
 
       act(() => { vi.advanceTimersByTime(3000) })
       expect(result.current.elapsedSec).toBe(8)
+    })
+  })
+
+  describe('rehydration from localStorage', () => {
+    it('restores running state when valid active session entry exists on mount', async () => {
+      const { getSession } = await import('../api/sessions')
+      const { ACTIVE_SESSION_KEY } = await import('../store')
+      const { useTimer } = await import('./useTimer')
+
+      const startedAt = Date.now() - 5000 // 5 seconds ago
+      const activeData = {
+        sessionId: 'rehydrated-session',
+        mode: 'stopwatch',
+        startedAt,
+        totalPausedMs: 0,
+        pomodoroConfig: null,
+        targetSec: null,
+        currentCycle: 1,
+        pomodoroPhase: 'work',
+      }
+      localStorageMock.setItem(ACTIVE_SESSION_KEY, JSON.stringify(activeData))
+
+      // getSession returns a mock with endedAt null (still active)
+      vi.mocked(getSession).mockResolvedValue({
+        id: 'rehydrated-session',
+        endedAt: null,
+        startedAt: new Date(startedAt).toISOString(),
+      } as never)
+
+      const { result } = renderHook(() => useTimer())
+
+      // Allow async rehydration effect to settle (flush microtasks + 1 tick)
+      await act(async () => {
+        await Promise.resolve() // flush microtasks
+        await Promise.resolve() // second flush for chained async
+      })
+
+      expect(result.current.status).toBe('running')
+      expect(result.current.sessionId).toBe('rehydrated-session')
+      expect(result.current.elapsedSec).toBeGreaterThanOrEqual(5)
+    })
+
+    it('clears stale localStorage entry when session already ended on server', async () => {
+      const { getSession } = await import('../api/sessions')
+      const { ACTIVE_SESSION_KEY } = await import('../store')
+      const { useTimer } = await import('./useTimer')
+
+      const activeData = {
+        sessionId: 'stale-session',
+        mode: 'stopwatch',
+        startedAt: Date.now() - 60000,
+        totalPausedMs: 0,
+        pomodoroConfig: null,
+        targetSec: null,
+        currentCycle: 1,
+        pomodoroPhase: 'work',
+      }
+      localStorageMock.setItem(ACTIVE_SESSION_KEY, JSON.stringify(activeData))
+
+      // getSession returns a record with endedAt set — session is stale
+      vi.mocked(getSession).mockResolvedValue({
+        id: 'stale-session',
+        endedAt: new Date().toISOString(),
+        startedAt: new Date(activeData.startedAt).toISOString(),
+      } as never)
+
+      const { result } = renderHook(() => useTimer())
+
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(result.current.status).toBe('idle')
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith(ACTIVE_SESSION_KEY)
+    })
+
+    it('stays idle when no localStorage entry exists on mount', async () => {
+      const { useTimer } = await import('./useTimer')
+
+      // No entry in localStorage (clear was called in beforeEach)
+      const { result } = renderHook(() => useTimer())
+
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(result.current.status).toBe('idle')
+      expect(result.current.sessionId).toBeNull()
     })
   })
 

@@ -8,9 +8,10 @@ import {
   ACTIVE_SESSION_KEY,
   type ActiveSessionData,
 } from '../store'
-import { createSession, endSession } from '../api/sessions'
+import { createSession, endSession, getSession } from '../api/sessions'
 import type { TimerMode } from '../api/sessions'
 import type { PomodoroConfig } from '../schemas'
+import pb from '@/shared/pb'
 
 export interface StartOptions {
   /** For countdown mode: total seconds to count down from */
@@ -142,6 +143,69 @@ export function useTimer(options: UseTimerOptions = {}) {
       clearTick()
     }
   }, [clearTick])
+
+  // Rehydrate active session from localStorage on mount
+  // Only runs once on mount — idempotent guard via store.status check
+  useEffect(() => {
+    const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
+    if (!raw) return
+
+    // Only rehydrate if the user is authenticated and store is idle
+    if (!pb.authStore.isValid) return
+    if (useTimerStore.getState().status !== 'idle') return
+
+    let cancelled = false
+
+    const rehydrate = async () => {
+      let data: ActiveSessionData
+      try {
+        data = JSON.parse(raw) as ActiveSessionData
+      } catch {
+        localStorage.removeItem(ACTIVE_SESSION_KEY)
+        return
+      }
+
+      // Verify the session is still active on the server
+      const record = await getSession(data.sessionId)
+
+      if (cancelled) return
+
+      if (!record || record.endedAt !== null) {
+        // Stale entry — clear it, stay idle
+        localStorage.removeItem(ACTIVE_SESSION_KEY)
+        return
+      }
+
+      // Session is live — restore store state
+      const store = useTimerStore.getState()
+      const now = Date.now()
+      const elapsedSec = Math.floor((now - data.startedAt - data.totalPausedMs) / 1000)
+
+      store.resetTimer()
+      store.setMode(data.mode)
+      store.setStatus('running')
+      store.setSessionId(data.sessionId)
+      store.setPomodoroConfig(data.pomodoroConfig)
+      store.setTargetSec(data.targetSec)
+      store.setSessionStartedAt(data.startedAt)
+      store.setCurrentCycle(data.currentCycle)
+      store.setPomodoroPhase(data.pomodoroPhase)
+      store.setElapsedSec(elapsedSec)
+
+      if (data.mode === 'countdown' && data.targetSec != null) {
+        store.setRemainingSec(Math.max(0, data.targetSec - elapsedSec))
+      }
+
+      startTick()
+    }
+
+    void rehydrate()
+
+    return () => {
+      cancelled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startTick])
 
   // --- Public API ---
 

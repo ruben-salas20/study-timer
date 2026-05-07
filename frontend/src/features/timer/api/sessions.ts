@@ -44,6 +44,24 @@ export async function endSession(id: string, durationSec: number): Promise<void>
 }
 
 /**
+ * getSession — fetch a single study_sessions record by id.
+ * Used for rehydration: verify the session is still active (endedAt === null).
+ * Returns null if the record does not exist or fetch fails.
+ */
+export async function getSession(id: string): Promise<{ id: string; endedAt: string | null; startedAt: string } | null> {
+  try {
+    const record = await pb.collection('study_sessions').getOne(id)
+    return {
+      id: record.id,
+      endedAt: (record['endedAt'] as string | null | undefined) ?? null,
+      startedAt: record['startedAt'] as string,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
  * listMySessions — fetch this user's sessions with optional filters.
  * Used for stats and history display.
  */
