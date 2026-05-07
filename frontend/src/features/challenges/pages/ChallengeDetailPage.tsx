@@ -3,6 +3,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useChallenge, useLeaveChallenge, useCancelChallenge } from '../hooks/useChallenges'
+import { useChallengeParticipantSessions } from '../hooks/useChallengeParticipantSessions'
 import { RaceLeaderboard } from '../components/RaceLeaderboard'
 import { WeeklyGoalGrid } from '../components/WeeklyGoalGrid'
 import { DuelHeadToHead } from '../components/DuelHeadToHead'
@@ -103,10 +104,12 @@ export function ChallengeDetailPage() {
     return userId === myId ? 'Tú' : `Usuario ${userId.slice(0, 6)}`
   }
 
-  // For group_streak: sessionsByUser is empty here (no session data fetched in F4 detail)
-  // The GroupStreakCalendar gracefully shows 0 days in this case.
-  // A richer implementation would fetch sessions per user (scoped to F5).
-  const sessionsByUser: Record<string, string[]> = {}
+  // For group_streak: fetch sessions for all participants and compute streak
+  const participantUserIds =
+    challenge.type === 'group_streak'
+      ? challenge.participants.map((p) => p.user)
+      : []
+  const { sessionsByUser } = useChallengeParticipantSessions(participantUserIds)
 
   async function handleLeave() {
     if (!myParticipant) return
