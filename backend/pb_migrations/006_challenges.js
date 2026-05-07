@@ -13,8 +13,10 @@
 //   - prizeLoser    : text nullable max 200
 //   - status        : select (pending | active | completed | cancelled) default pending
 //
-// API rules:
-//   listRule / viewRule  : participant OR creator
+// API rules (initial — tightened in migration 009):
+//   listRule / viewRule  : creator only (cross-collection rule added in 009 after
+//                          challenge_participants is created — chicken-and-egg if
+//                          we tried to reference @collection.challenge_participants here)
 //   createRule           : authenticated AND createdBy = auth id
 //   updateRule           : creator AND status=pending AND startsAt > now
 //   deleteRule           : same as update
@@ -30,8 +32,8 @@ migrate(
     const collection = new Collection({
       name: "challenges",
       type: "base",
-      listRule: '@request.auth.id != "" && (createdBy = @request.auth.id || @collection.challenge_participants.challenge ?= id && @collection.challenge_participants.user ?= @request.auth.id)',
-      viewRule: '@request.auth.id != "" && (createdBy = @request.auth.id || @collection.challenge_participants.challenge ?= id && @collection.challenge_participants.user ?= @request.auth.id)',
+      listRule: '@request.auth.id != "" && createdBy = @request.auth.id',
+      viewRule: '@request.auth.id != "" && createdBy = @request.auth.id',
       createRule: '@request.auth.id != "" && createdBy = @request.auth.id',
       updateRule: '@request.auth.id != "" && createdBy = @request.auth.id && status = "pending"',
       deleteRule: '@request.auth.id != "" && createdBy = @request.auth.id && status = "pending"',
