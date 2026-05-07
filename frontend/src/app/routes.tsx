@@ -1,6 +1,6 @@
-// routes.tsx — Full application routing (T22)
+// routes.tsx — Full application routing
 // Public routes: /welcome, /register, /login
-// Protected routes (RequireAuth): /home, /onboarding/goal, /onboarding/invite, /settings, /timer, /friends, /challenges, /stats
+// Protected routes (RequireAuth): /home, /onboarding/*, /settings, /timer/active, /friends, /challenges, /stats
 // Catch-all: 404
 // BrowserRouter is provided by providers.tsx — do NOT add it here.
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
@@ -8,7 +8,8 @@ import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { WelcomePage } from '@/features/auth/pages/WelcomePage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
-import { HomePage } from '@/features/home/pages/HomePage'
+import { HomeTimerPage } from '@/features/timer/pages/HomeTimerPage'
+import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 
@@ -54,7 +55,15 @@ export function AppRoutes() {
         path="/home"
         element={
           <RequireAuth>
-            <HomePage />
+            <HomeTimerPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/timer/active"
+        element={
+          <RequireAuth>
+            <ActiveSessionPage />
           </RequireAuth>
         }
       />
@@ -79,14 +88,6 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <SettingsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/timer"
-        element={
-          <RequireAuth>
-            <Placeholder name="Timer" />
           </RequireAuth>
         }
       />
