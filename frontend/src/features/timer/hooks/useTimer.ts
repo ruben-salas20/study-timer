@@ -3,6 +3,7 @@
 // State lives in zustand store (survives navigation), with localStorage for reload recovery.
 // On stop: PATCH study_sessions with endedAt + durationSec, clear localStorage, reset store.
 import { useEffect, useRef, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   useTimerStore,
   ACTIVE_SESSION_KEY,
@@ -34,6 +35,7 @@ export interface UseTimerOptions {
  */
 export function useTimer(options: UseTimerOptions = {}) {
   const store = useTimerStore()
+  const queryClient = useQueryClient()
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const onCompleteRef = useRef(options.onComplete)
   onCompleteRef.current = options.onComplete
@@ -137,12 +139,19 @@ export function useTimer(options: UseTimerOptions = {}) {
     intervalRef.current = setInterval(tick, 1000)
   }, [clearTick, tick])
 
-  // On unmount, clear the interval
+  // On mount: if the store is already in 'running' state (e.g. user navigated
+  // from HomeTimerPage to /timer/active right after start()), make sure we
+  // own a live tick. Without this, the previous component's unmount cleanup
+  // kills the setInterval and the visual freezes until a manual pause/resume.
+  // On unmount: clear our interval.
   useEffect(() => {
+    if (useTimerStore.getState().status === 'running' && intervalRef.current == null) {
+      startTick()
+    }
     return () => {
       clearTick()
     }
-  }, [clearTick])
+  }, [clearTick, startTick])
 
   // Rehydrate active session from localStorage on mount
   // Only runs once on mount — idempotent guard via store.status check
@@ -294,7 +303,13 @@ export function useTimer(options: UseTimerOptions = {}) {
 
     localStorage.removeItem(ACTIVE_SESSION_KEY)
     useTimerStore.getState().resetTimer()
-  }, [clearTick])
+
+    // Invalidate caches that depend on session data so the home stats strip,
+    // weekly goal progress and stats page refresh immediately after a session.
+    queryClient.invalidateQueries({ queryKey: ['timer'] })
+    queryClient.invalidateQueries({ queryKey: ['stats'] })
+    queryClient.invalidateQueries({ queryKey: ['friends', 'weeklyRanking'] })
+  }, [clearTick, queryClient])
 
   const reset = useCallback(() => {
     clearTick()

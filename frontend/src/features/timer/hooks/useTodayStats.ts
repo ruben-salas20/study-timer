@@ -52,7 +52,8 @@ export function useTodayStats() {
   const { data } = useQuery({
     queryKey: ['timer', 'todayStats'],
     queryFn: fetchTodayStats,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30s — refresh quickly after sessions end
+    refetchOnMount: 'always',
     enabled: pb.authStore.isValid,
   })
 
