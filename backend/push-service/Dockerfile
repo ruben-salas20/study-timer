@@ -8,8 +8,10 @@ WORKDIR /app
 # Copy package files first for layer caching
 COPY package.json ./
 
-# Install production dependencies only
-RUN npm ci --omit=dev
+# Install production dependencies. Using `npm install` (not `npm ci`) since
+# this micro-service has no committed package-lock.yaml; deps are minimal
+# (express + web-push + pocketbase + dotenv) and resolved fresh on build.
+RUN npm install --omit=dev
 
 # Copy application source
 COPY index.js ./

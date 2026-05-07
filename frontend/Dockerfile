@@ -20,8 +20,10 @@
 # ── Stage 1: build ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
-# Enable corepack so we can use pnpm without a global install
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable corepack so we can use pnpm without a global install.
+# Pin to pnpm 10.x — latest pnpm 11+ requires Node 22.13+, but we run Node 20
+# for stability and compatibility with the Dockerfile base.
+RUN corepack enable && corepack prepare pnpm@10.13.0 --activate
 
 WORKDIR /app
 
