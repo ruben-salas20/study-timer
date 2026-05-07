@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# PocketBase data (never commit database or uploads)
+pb_data/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Vite local overrides
+*.local
+
+# Editor directories and files
+.DS_Store
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/extensions.json
+
+# Design reference material (not source code)
+design-bundle/
+wireframes-raw.html
+
+# pnpm lockfile at root (lockfile lives in frontend/)
+# Uncomment if you add root-level pnpm deps:
+# pnpm-lock.yaml
+
+# OS
+Thumbs.db
