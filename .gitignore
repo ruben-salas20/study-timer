@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+backend/push-service/node_modules/
 
 # Build outputs
 dist/

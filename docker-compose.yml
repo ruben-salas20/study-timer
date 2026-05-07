@@ -32,4 +32,26 @@ services:
       # inside the container without rebuilding the image
       - ./backend/pb_migrations:/pb/pb_migrations:ro
       - ./backend/pb_hooks:/pb/pb_hooks:ro
+    environment:
+      - PUSH_SERVICE_URL=http://push-service:3001
+      - PUSH_SERVICE_TOKEN
+    restart: unless-stopped
+
+  # push-service — Web Push dispatcher (F6)
+  # Handles VAPID signing and delivery to browser push endpoints.
+  # PocketBase hooks call POST /dispatch to trigger notifications.
+  push-service:
+    build:
+      context: ./backend/push-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - pocketbase
+    environment:
+      - VAPID_PUBLIC_KEY
+      - VAPID_PRIVATE_KEY
+      - VAPID_SUBJECT
+      - PUSH_SERVICE_TOKEN
+      - POCKETBASE_URL=http://pocketbase:8090
+      - POCKETBASE_ADMIN_TOKEN
     restart: unless-stopped

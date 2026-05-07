@@ -55,6 +55,24 @@ services:
       - VAPID_PUBLIC_KEY
       - VAPID_PRIVATE_KEY
       - VAPID_SUBJECT
+      - PUSH_SERVICE_URL=http://push-service:3001
+      - PUSH_SERVICE_TOKEN
+
+  # push-service — Web Push dispatcher (F6)
+  # Not exposed to the host — only Caddy and PocketBase reach it via Docker network.
+  push-service:
+    build:
+      context: ./backend/push-service
+    restart: unless-stopped
+    depends_on:
+      - pocketbase
+    environment:
+      - VAPID_PUBLIC_KEY
+      - VAPID_PRIVATE_KEY
+      - VAPID_SUBJECT
+      - PUSH_SERVICE_TOKEN
+      - POCKETBASE_URL=http://pocketbase:8090
+      - POCKETBASE_ADMIN_TOKEN
 
 volumes:
   caddy_data:

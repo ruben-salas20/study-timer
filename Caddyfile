@@ -8,6 +8,7 @@
 #   /api/*      → PocketBase REST API
 #   /_/*        → PocketBase admin UI and internal routes
 #   /realtime   → PocketBase SSE/WebSocket realtime endpoint
+#   /push/*     → push-service Web Push dispatcher (F6)
 #   /*          → Frontend SPA (served from /srv/frontend, fallback to index.html)
 #
 # See ARCHITECTURE.md §8 for the full production setup and VPS deployment guide.
@@ -31,6 +32,14 @@
         reverse_proxy pocketbase:8090 {
             flush_interval -1
         }
+    }
+
+    # push-service Web Push dispatcher (F6)
+    # Only the push-service itself should expose /dispatch — Caddy proxies /push/*
+    # so external callers can reach /push/health for monitoring.
+    # Internal PocketBase-to-push-service calls bypass Caddy (Docker network).
+    handle /push/* {
+        reverse_proxy push-service:3001
     }
 
     # Everything else → SPA shell
