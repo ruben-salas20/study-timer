@@ -1,6 +1,5 @@
-# CI pipeline — lint + typecheck + test
+# CI pipeline — lint + typecheck + test + docker-build
 # Runs on every push to main and on pull requests
-# Deploy step is NOT included here — see F7 (deploy.yml)
 name: CI
 
 on:
@@ -10,6 +9,7 @@ on:
     branches: [main]
 
 jobs:
+  # ── Job 1: Lint, typecheck, and test ───────────────────────────────────────
   test:
     name: Lint, typecheck, and test
     runs-on: ubuntu-latest
@@ -43,3 +43,58 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  # ── Job 2: Verify Docker images build cleanly ──────────────────────────────
+  # This does NOT push images to a registry — it only verifies that each
+  # Dockerfile builds without errors. Real deployment is handled by deploy.sh
+  # on the VPS (see scripts/deploy.sh and README §Deploy a producción).
+  docker-build:
+    name: Docker build verification
+    runs-on: ubuntu-latest
+    # No need to wait for tests — these are independent checks
+    # If you want to gate on tests passing, add: needs: [test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Frontend (multi-stage: Node/pnpm build + Caddy runtime) ────────────
+      # Uses dummy VITE_ build args so the build completes without a real env.
+      # The actual values are injected at deploy time via docker-compose.prod.yml.
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          build-args: |
+            VITE_PB_URL=https://example.com
+            VITE_PUSH_SERVICE_URL=https://example.com/push
+            VITE_VAPID_PUBLIC_KEY=BExampleVapidPublicKeyForCIBuildVerificationOnly
+          tags: study-timer-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── PocketBase backend ──────────────────────────────────────────────────
+      - name: Build pocketbase image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          build-args: |
+            PB_VERSION=0.23.4
+          tags: study-timer-pocketbase:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── push-service ────────────────────────────────────────────────────────
+      - name: Build push-service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend/push-service
+          push: false
+          tags: study-timer-push:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
