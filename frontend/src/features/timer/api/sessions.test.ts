@@ -57,15 +57,15 @@ describe('sessions API', () => {
       } as ReturnType<typeof pb.collection>)
 
       const { createSession } = await import('./sessions')
-      const config = { workMin: 25, breakMin: 5, cycles: 4 }
-      const result = await createSession('pomodoro', config)
+      const pomodoroConfig = { workMin: 25, breakMin: 5, cycles: 4 }
+      const result = await createSession('pomodoro', { pomodoroConfig })
 
       expect(result).toBe('session-def')
       const createFn = vi.mocked(pb.collection).mock.results[0].value.create
       expect(createFn).toHaveBeenCalledWith(
         expect.objectContaining({
           mode: 'pomodoro',
-          pomodoroConfig: config,
+          pomodoroConfig,
         })
       )
     })
