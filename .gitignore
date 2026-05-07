@@ -7,6 +7,10 @@ build/
 
 # PocketBase data (never commit database or uploads)
 pb_data/
+backend/pb_data/
+
+# PocketBase binary (developers download per-OS — never committed)
+backend/.pb-binary/
 
 # Environment files (contain secrets)
 .env
