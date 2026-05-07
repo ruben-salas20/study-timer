@@ -27,6 +27,9 @@ function generateCode() {
 }
 
 onRecordCreate((e) => {
+  // DEBUG: confirm hook fires (visible in `docker compose logs pocketbase`)
+  $app.logger().info("on-user-create hook fired", "email", e.record.get("email"));
+
   // Defaults for optional profile fields
   if (!e.record.get("weeklyGoalMinutes")) {
     e.record.set("weeklyGoalMinutes", 600);
