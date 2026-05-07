@@ -11,12 +11,14 @@
 //      normalised pair (any status), throw "duplicate friendship".
 //      PocketBase 0.23 does not have composite unique on relation fields,
 //      so we enforce it here in the hook.
+//   5. [F6] Push notification: notify the target user of the friend request.
+//      The notification is best-effort — failure never blocks the hook.
 //
 // Security rationale:
 //   requestedBy is set from request auth, not from client payload, to prevent
 //   a malicious client from impersonating the requester.
 //
-// Reference: ARCHITECTURE.md §4, F3 scope.
+// Reference: ARCHITECTURE.md §4, F3/F6 scope.
 
 /// <reference path="../pb_data/types.d.ts" />
 
@@ -66,4 +68,66 @@ onRecordCreate((e) => {
   }
 
   e.next();
+
+  // [F6] Push notification — notify the target user of the friend request.
+  // The target is whichever of userA/userB is NOT the requestedBy.
+  // Wrapped in try/catch so push failure never throws inside a model hook.
+  try {
+    const requestedBy = e.record.get("requestedBy");
+    const targetUserId = userA === requestedBy ? userB : userA;
+
+    // Fetch the requester's displayName for the notification body
+    let requesterName = "Alguien";
+    try {
+      const requester = e.app.findRecordById("users", requestedBy);
+      requesterName = requester.get("displayName") || requesterName;
+    } catch (_) { /* not critical */ }
+
+    dispatchPush(e.app, targetUserId, {
+      title: "Nueva solicitud de amistad",
+      body: `${requesterName} te quiere agregar como amigo`,
+      url: "/friends",
+      tag: "friend-request",
+    });
+  } catch (pushErr) {
+    console.error("[on-friendship-create] Push notification failed:", pushErr);
+  }
 }, "friendships");
+
+// ── Push helper (inline — goja does not support require() for local modules) ──
+
+/**
+ * dispatchPush — fire a push notification for a user via the push-service.
+ * Best-effort: errors are logged but never re-thrown.
+ */
+function dispatchPush(app, userId, payload) {
+  try {
+    const pushServiceUrl = $os.getenv("PUSH_SERVICE_URL") || "http://push-service:3001";
+    const pushServiceToken = $os.getenv("PUSH_SERVICE_TOKEN") || "";
+
+    if (!pushServiceToken) {
+      console.warn("[notifications] PUSH_SERVICE_TOKEN not set — skipping push");
+      return;
+    }
+
+    const response = $http.send({
+      url: `${pushServiceUrl}/dispatch`,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${pushServiceToken}`,
+      },
+      body: JSON.stringify({ userId, payload }),
+      timeout: 5,
+    });
+
+    if (response.statusCode >= 400) {
+      console.error(
+        `[notifications] push-service returned ${response.statusCode} for user ${userId}:`,
+        response.raw
+      );
+    }
+  } catch (err) {
+    console.error("[notifications] Failed to dispatch push notification:", err);
+  }
+}
