@@ -6,7 +6,7 @@
     "dev": "cd frontend && pnpm dev",
     "lint": "cd frontend && pnpm lint",
     "test": "cd frontend && pnpm test",
-    "pb": "cd backend && .pb-binary/pocketbase serve --dir=./pb_data --migrationsDir=./pb_migrations --hooksDir=./pb_hooks"
+    "pb": "cd backend && ./.pb-binary/pocketbase serve --dir=./pb_data --migrationsDir=./pb_migrations --hooksDir=./pb_hooks"
   },
   "engines": {
     "node": ">=20",
