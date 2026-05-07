@@ -70,7 +70,8 @@ describe('ChallengeCard', () => {
 
   it('renders the challenge type label for race', () => {
     renderCard({ type: 'race' })
-    expect(screen.getByText(/Carrera/i)).toBeInTheDocument()
+    // "Carrera" is the type label; title "Carrera épica" also matches, so use exact
+    expect(screen.getByText('Carrera')).toBeInTheDocument()
   })
 
   it('renders the challenge type label for group_streak', () => {
