@@ -1,0 +1,19 @@
+{
+  "name": "study-timer-push-service",
+  "version": "1.0.0",
+  "description": "Web Push dispatcher microservice for Study Timer",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "pocketbase": "^0.21.0",
+    "web-push": "^3.6.0"
+  }
+}

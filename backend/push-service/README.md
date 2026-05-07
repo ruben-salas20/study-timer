@@ -1,51 +1,122 @@
-# push-service — Web Push microservice (F6 placeholder)
+# push-service — Web Push Dispatcher (F6)
 
-This directory is reserved for the Web Push dispatcher microservice, to be
-implemented in **F6 — PWA + Push**.
+Standalone Node.js microservice that handles Web Push notification delivery for
+Study Timer. PocketBase hooks call this service via HTTP whenever they need to
+push a notification to a user.
 
 ## Why a separate microservice?
 
-PocketBase hooks (`pb_hooks/`) run inside a **goja** JavaScript runtime. Goja is
-a Go-embedded ES5.1 engine: it is synchronous, has no event loop, and — crucially
-— cannot execute npm packages. The `web-push` npm package (which handles VAPID
-key signing and HTTP/2 delivery to push endpoints) depends on Node.js crypto APIs
-that are unavailable in goja.
+PocketBase hooks run inside a **goja** JavaScript runtime (Go-embedded ES5.1).
+Goja has no event loop and cannot execute npm packages. The `web-push` library
+requires Node.js crypto APIs unavailable in goja, so we run it as a sidecar.
 
-Two implementation paths were evaluated:
-
-| Option | Pros | Cons |
-|--------|------|------|
-| Pure goja hook (pb_hooks) | No extra service, simpler deploy | Cannot use `web-push`; manual VAPID signing in pure Go/goja is complex and error-prone |
-| **Node microservice (chosen)** | Official `web-push` npm, straightforward VAPID, easy to test | One more container in prod compose |
-
-**Decision**: implement as a standalone Node service in F6. PocketBase hooks will
-call this service via HTTP when a push event fires (e.g. challenge ended, friend
-surpassed you in ranking).
-
-## Planned stack
+## Stack
 
 - **Runtime**: Node 20 LTS
-- **Framework**: Express (minimal HTTP surface — just one `POST /send` endpoint)
-- **Push library**: [`web-push`](https://github.com/web-push-libs/web-push)
-- **PocketBase integration**: [`pocketbase` JS SDK](https://github.com/pocketbase/js-sdk) for realtime subscription to relevant events
-- **Config**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` from environment (see `.env.example`)
+- **Framework**: Express ^4
+- **Push library**: `web-push` ^3 (handles VAPID signing + HTTP/2 delivery)
+- **PocketBase client**: `pocketbase` ^0.21 (fetch subscriptions, delete stale ones)
 
-## Trigger events (planned)
+## Generating VAPID Keys
 
-| Event | Source | Notification |
-|-------|--------|--------------|
-| Challenge completed | pb_hooks/on-session-end.js | Notify all participants |
-| Challenge ending soon (1 h before) | pb_hooks/crons.js | Notify active participants |
-| Friend surpassed you in weekly ranking | pb_hooks/on-session-end.js | Notify the user who was passed |
-| Friendship request accepted | pb_hooks/on-friend-accept.js | Notify the requester |
+Run once and store in `.env` (never commit `.env`):
 
-## F6 implementation checklist
+```bash
+npx web-push generate-vapid-keys
+```
 
-- [ ] `package.json` with express + web-push + pocketbase
-- [ ] `src/index.ts` — Express app + `POST /send` endpoint
-- [ ] `src/push.ts` — VAPID signing wrapper around `web-push`
-- [ ] `src/pb-listener.ts` — PocketBase realtime subscription for trigger events
-- [ ] `Dockerfile` (Node 20 Alpine, non-root user)
-- [ ] Add `push-service` service to `docker-compose.prod.yml`
-- [ ] Wire pb_hooks to call this service via `$http.send()`
-- [ ] Integration test: subscribe → trigger → receive notification in browser
+Output looks like:
+
+```
+Public Key:
+BK3...
+
+Private Key:
+sk_...
+```
+
+Put these in your `.env`:
+
+```
+VAPID_PUBLIC_KEY=BK3...
+VAPID_PRIVATE_KEY=sk_...
+VAPID_SUBJECT=mailto:admin@yourdomain.com
+VITE_VAPID_PUBLIC_KEY=BK3...   # same public key — frontend uses this
+```
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VAPID_PUBLIC_KEY` | Yes | — | VAPID public key (base64-url) |
+| `VAPID_PRIVATE_KEY` | Yes | — | VAPID private key (SECRET) |
+| `VAPID_SUBJECT` | Yes | — | `mailto:` or `https:` contact URL |
+| `POCKETBASE_URL` | No | `http://localhost:8090` | PocketBase API URL |
+| `POCKETBASE_ADMIN_TOKEN` | No | — | PB admin token for subscription queries |
+| `PUSH_SERVICE_TOKEN` | Yes | — | Shared secret for `/dispatch` auth |
+| `PORT` | No | `3001` | HTTP port to listen on |
+
+## API
+
+### `GET /health`
+
+Liveness probe. Returns `{ status: "ok" }`.
+
+### `POST /dispatch`
+
+Send a push notification to all subscriptions of a user.
+
+**Headers**: `Authorization: Bearer <PUSH_SERVICE_TOKEN>`
+
+**Body**:
+```json
+{
+  "userId": "abc123",
+  "payload": {
+    "title": "Nueva solicitud de amistad",
+    "body": "Juan te quiere agregar",
+    "url": "/friends",
+    "tag": "friend-request"
+  }
+}
+```
+
+**Response**:
+```json
+{ "sent": 2, "removed": 0 }
+```
+
+- `sent`: subscriptions successfully notified
+- `removed`: stale subscriptions deleted (received 410/404 from push provider)
+
+## Development Usage
+
+```bash
+# From repo root
+cd backend/push-service
+cp ../../.env.example .env   # then fill in VAPID + PUSH_SERVICE_TOKEN
+npm install
+npm run dev                  # starts with --watch for auto-reload
+```
+
+The dev frontend (at :5173) will generate push subscriptions that land in
+PocketBase (:8090). This service must be running for hooks to dispatch pushes.
+
+## Docker
+
+Build and run manually:
+
+```bash
+docker build -t study-timer-push-service .
+docker run -p 3001:3001 --env-file ../../.env study-timer-push-service
+```
+
+Or use `docker compose up` from the repo root — the push-service is defined
+in both `docker-compose.yml` (dev) and `docker-compose.prod.yml`.
+
+## Notes
+
+- Web Push only works on **HTTPS** (or localhost during dev)
+- The service never stores notifications — fire and forget
+- Stale subscriptions (410/404 from push gateway) are auto-removed
+- Push failures are logged but NEVER block the main PocketBase hook operation
