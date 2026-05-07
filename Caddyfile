@@ -1,0 +1,43 @@
+# Caddyfile — Production reverse proxy configuration
+#
+# DOMAIN is injected from the environment (set in .env or docker-compose.prod.yml).
+# Caddy auto-obtains and renews TLS certificates from Let's Encrypt using the
+# domain name as the ACME identifier. No manual cert management needed.
+#
+# Traffic routing:
+#   /api/*      → PocketBase REST API
+#   /_/*        → PocketBase admin UI and internal routes
+#   /realtime   → PocketBase SSE/WebSocket realtime endpoint
+#   /*          → Frontend SPA (served from /srv/frontend, fallback to index.html)
+#
+# See ARCHITECTURE.md §8 for the full production setup and VPS deployment guide.
+
+{$DOMAIN} {
+    encode zstd gzip
+
+    # PocketBase REST API
+    handle /api/* {
+        reverse_proxy pocketbase:8090
+    }
+
+    # PocketBase internal routes (admin UI at /_/, health at /_/health)
+    handle /_/* {
+        reverse_proxy pocketbase:8090
+    }
+
+    # PocketBase realtime endpoint (SSE / WebSocket)
+    # This must NOT be cached or buffered — pass through immediately
+    handle /realtime {
+        reverse_proxy pocketbase:8090 {
+            flush_interval -1
+        }
+    }
+
+    # Everything else → SPA shell
+    # try_files falls back to index.html so React Router handles client-side routing
+    handle {
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+    }
+}
