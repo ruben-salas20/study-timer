@@ -1,54 +1,76 @@
 # docker-compose.prod.yml — Production stack
 #
-# Full production setup: Caddy reverse-proxies both the built frontend static
-# files and PocketBase API/realtime behind a single HTTPS domain.
+# Three services:
+#   web          — Caddy reverse proxy + compiled SPA (built from frontend/Dockerfile)
+#   pocketbase   — PocketBase 0.23.4 (auth, DB, realtime, storage)
+#   push-service — Node Web Push dispatcher (F6)
 #
 # Prerequisites:
-#   1. Build the frontend first: cd frontend && pnpm build
-#      (output lands in frontend/dist/, which Caddy serves as static files)
-#   2. Create a .env file at the repo root with at least:
-#        DOMAIN=your-subdomain.example.com
+#   1. Create a .env file at the repo root (copy from .env.example) with at least:
+#        DOMAIN=your-subdomain.hostinger.com
 #        VAPID_PUBLIC_KEY=...
 #        VAPID_PRIVATE_KEY=...
 #        VAPID_SUBJECT=mailto:you@example.com
-#   3. Ensure ./backend/pb_data/ exists and is writable on the host
+#        PUSH_SERVICE_TOKEN=...  (openssl rand -hex 32)
+#        POCKETBASE_ADMIN_TOKEN=...
+#   2. Point your DNS A record for $DOMAIN to the VPS IP.
+#      Caddy will auto-acquire TLS from Let's Encrypt on first startup.
+#   3. Ports 80 and 443 must be open on the VPS firewall.
 #
-# This file will be fully integrated with automated VPS deployment in F7.
-# Until then, deploy manually:
+# Deployment:
+#   ./scripts/deploy.sh
+# Or manually:
+#   docker compose -f docker-compose.prod.yml build
 #   docker compose -f docker-compose.prod.yml up -d
-#
-# See ARCHITECTURE.md §8 for the full deployment runbook.
 
 services:
-  caddy:
-    image: caddy:2-alpine
+  # ── Web (Caddy + compiled SPA) ──────────────────────────────────────────────
+  # This image is built from frontend/Dockerfile (multi-stage):
+  #   Stage 1: Node/pnpm builds the Vite SPA (dist/ output).
+  #   Stage 2: Caddy 2 alpine with the dist baked in at /srv/frontend.
+  # Caddy auto-acquires TLS for $DOMAIN via Let's Encrypt (ACME HTTP-01).
+  web:
+    build:
+      context: ./frontend
+      args:
+        # These are public-facing URL values — NOT secrets.
+        # VITE_ vars are inlined by Vite at build time; they end up in the JS bundle.
+        VITE_PB_URL: https://${DOMAIN}
+        VITE_PUSH_SERVICE_URL: https://${DOMAIN}/push
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY}
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      # Caddyfile is bind-mounted read-only so it can be updated without rebuild
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # Built frontend static files — produced by `pnpm build` in ./frontend/
-      - ./frontend/dist:/srv/frontend:ro
-      # Caddy persists TLS certificates in caddy_data; losing this volume
-      # forces a new ACME challenge (rate-limited — keep this volume safe)
+      # caddy_data persists TLS certificates across container restarts.
+      # LOSING this volume triggers a new ACME challenge — Let's Encrypt rate-limits
+      # certificate issuance, so keep this volume backed up.
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - pocketbase
     environment:
       - DOMAIN
+    depends_on:
+      - pocketbase
+      - push-service
+    networks:
+      - studytimer
 
+  # ── PocketBase ───────────────────────────────────────────────────────────────
+  # NOT exposed to the host — only `web` (Caddy) reaches it via Docker network.
   pocketbase:
     build:
       context: ./backend
       args:
         PB_VERSION: "0.23.4"
     restart: unless-stopped
-    # PocketBase is NOT exposed to the host in prod — only Caddy reaches it
-    # via the internal Docker network on port 8090.
     volumes:
+      # pb_data holds the SQLite database — always bind-mount, never bake into image.
       - ./backend/pb_data:/pb/pb_data
+      # Migrations and hooks are read-only in prod; baked into image at build time
+      # but also bind-mounted so live updates are possible without a full rebuild.
       - ./backend/pb_migrations:/pb/pb_migrations:ro
       - ./backend/pb_hooks:/pb/pb_hooks:ro
     environment:
@@ -57,9 +79,13 @@ services:
       - VAPID_SUBJECT
       - PUSH_SERVICE_URL=http://push-service:3001
       - PUSH_SERVICE_TOKEN
+    networks:
+      - studytimer
 
-  # push-service — Web Push dispatcher (F6)
-  # Not exposed to the host — only Caddy and PocketBase reach it via Docker network.
+  # ── push-service ─────────────────────────────────────────────────────────────
+  # Node Web Push dispatcher (F6). NOT exposed to the host.
+  # Caddy proxies /push/* → push-service:3001.
+  # PocketBase hooks call push-service directly over the Docker network.
   push-service:
     build:
       context: ./backend/push-service
@@ -73,6 +99,12 @@ services:
       - PUSH_SERVICE_TOKEN
       - POCKETBASE_URL=http://pocketbase:8090
       - POCKETBASE_ADMIN_TOKEN
+    networks:
+      - studytimer
+
+networks:
+  studytimer:
+    driver: bridge
 
 volumes:
   caddy_data:
