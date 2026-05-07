@@ -14,6 +14,9 @@ import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
+import { ChallengesPage } from '@/features/challenges/pages/ChallengesPage'
+import { NewChallengePage } from '@/features/challenges/pages/NewChallengePage'
+import { ChallengeDetailPage } from '@/features/challenges/pages/ChallengeDetailPage'
 
 /** Simple placeholder for routes not yet implemented */
 function Placeholder({ name }: { name: string }) {
@@ -113,7 +116,23 @@ export function AppRoutes() {
         path="/challenges"
         element={
           <RequireAuth>
-            <Placeholder name="Retos" />
+            <ChallengesPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/challenges/new"
+        element={
+          <RequireAuth>
+            <NewChallengePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/challenges/:id"
+        element={
+          <RequireAuth>
+            <ChallengeDetailPage />
           </RequireAuth>
         }
       />
