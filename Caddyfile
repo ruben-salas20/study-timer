@@ -5,16 +5,23 @@
 # domain name as the ACME identifier. No manual cert management needed.
 #
 # Traffic routing:
+#   /push/*     → push-service Web Push dispatcher (F6)
 #   /api/*      → PocketBase REST API
 #   /_/*        → PocketBase admin UI and internal routes
-#   /realtime   → PocketBase SSE/WebSocket realtime endpoint
-#   /push/*     → push-service Web Push dispatcher (F6)
+#   /realtime   → PocketBase SSE/WebSocket realtime endpoint (no buffering)
 #   /*          → Frontend SPA (served from /srv/frontend, fallback to index.html)
 #
-# See ARCHITECTURE.md §8 for the full production setup and VPS deployment guide.
+# See README.md §Deploy a producción for the full production setup and VPS guide.
 
 {$DOMAIN} {
     encode zstd gzip
+
+    # push-service Web Push dispatcher (F6)
+    # Caddy proxies /push/* externally; internal PocketBase→push calls bypass
+    # Caddy entirely via the Docker network (http://push-service:3001).
+    handle /push/* {
+        reverse_proxy push-service:3001
+    }
 
     # PocketBase REST API
     handle /api/* {
@@ -27,23 +34,15 @@
     }
 
     # PocketBase realtime endpoint (SSE / WebSocket)
-    # This must NOT be cached or buffered — pass through immediately
+    # flush_interval -1 disables response buffering — required for SSE.
     handle /realtime {
         reverse_proxy pocketbase:8090 {
             flush_interval -1
         }
     }
 
-    # push-service Web Push dispatcher (F6)
-    # Only the push-service itself should expose /dispatch — Caddy proxies /push/*
-    # so external callers can reach /push/health for monitoring.
-    # Internal PocketBase-to-push-service calls bypass Caddy (Docker network).
-    handle /push/* {
-        reverse_proxy push-service:3001
-    }
-
     # Everything else → SPA shell
-    # try_files falls back to index.html so React Router handles client-side routing
+    # try_files falls back to index.html so React Router handles client-side routing.
     handle {
         root * /srv/frontend
         try_files {path} /index.html
