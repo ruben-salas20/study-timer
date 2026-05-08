@@ -10,6 +10,12 @@ import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { usePushPermission } from '@/features/pwa/hooks/usePushPermission'
 import { usePushSubscription } from '@/features/pwa/hooks/usePushSubscription'
 import { NotificationsDeniedBadge } from '@/features/pwa/components/EnableNotificationsCTA'
+import {
+  alertsEnabled,
+  setAlertsEnabled,
+  playAlert,
+  requestNotificationPermission,
+} from '@/shared/lib/alerts'
 
 type Theme = 'auto' | 'light' | 'dark'
 type AccentColor = 'sage' | 'blue' | 'warm' | 'mono'
@@ -59,6 +65,18 @@ export function SettingsPage() {
   const { permission, request: requestPermission } = usePushPermission()
   const { isSubscribed, isLoading: pushLoading, subscribe, unsubscribe } = usePushSubscription()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [timerAlerts, setTimerAlerts] = useState<boolean>(() => alertsEnabled())
+
+  function handleToggleAlerts(enabled: boolean) {
+    setAlertsEnabled(enabled)
+    setTimerAlerts(enabled)
+    if (enabled) {
+      // Request notification permission so background alerts also work
+      void requestNotificationPermission()
+      // Play a soft preview so user knows it's on
+      playAlert('soft')
+    }
+  }
 
   const currentTheme = (user?.theme as Theme | undefined) ?? 'auto'
   const currentAccent = (user?.accentColor as AccentColor | undefined) ?? 'sage'
@@ -152,6 +170,48 @@ export function SettingsPage() {
               </option>
             ))}
           </select>
+        </section>
+
+        {/* ── Alertas del timer ────────────────────────────────────────── */}
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+            Alertas del timer
+          </p>
+          <div className="flex items-center justify-between rounded-xl border border-current/20 px-4 py-3">
+            <div className="flex-1 pr-3">
+              <p className="text-sm font-medium">Sonido + vibración + notificación</p>
+              <p className="text-xs opacity-50 mt-0.5">
+                Avisa cuando termina un Pomodoro, una cuenta regresiva o un break.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleAlerts(!timerAlerts)}
+              role="switch"
+              aria-checked={timerAlerts}
+              className={[
+                'relative w-11 h-6 rounded-full transition-colors',
+                timerAlerts ? 'bg-(--color-primary)' : 'bg-current/20',
+              ].join(' ')}
+              aria-label={timerAlerts ? 'Desactivar alertas' : 'Activar alertas'}
+            >
+              <span
+                className={[
+                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                  timerAlerts ? 'translate-x-6' : 'translate-x-1',
+                ].join(' ')}
+              />
+            </button>
+          </div>
+          {timerAlerts && (
+            <button
+              type="button"
+              onClick={() => playAlert('strong')}
+              className="text-xs text-(--color-primary) opacity-70 hover:opacity-100 mt-2"
+            >
+              Probar sonido →
+            </button>
+          )}
         </section>
 
         {/* ── Modo Focus ────────────────────────────────────────────────── */}

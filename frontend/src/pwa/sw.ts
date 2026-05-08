@@ -56,8 +56,25 @@ cleanupOutdatedCaches()
 // can handle client-side routing without server round-trips.
 
 const handler = createHandlerBoundToURL('/index.html')
-const navigationRoute = new NavigationRoute(handler, {
-  // Never use the cached shell for PocketBase or push-service routes
+
+// Wrap the SPA-shell handler so offline navigations fall back to /offline.html
+const navigationHandler = async (params: Parameters<typeof handler>[0]) => {
+  try {
+    return await handler(params)
+  } catch {
+    // Network failed AND no cached shell — serve the offline page if cached
+    const cache = await caches.open('app-shell-cache')
+    const offline = await cache.match('/offline.html')
+    if (offline) return offline
+    // Last resort: a minimal inline response so we never throw
+    return new Response(
+      '<!doctype html><meta charset="utf-8"><title>Sin conexión</title><p>Sin conexión.</p>',
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    )
+  }
+}
+
+const navigationRoute = new NavigationRoute(navigationHandler, {
   denylist: [/^\/api\//, /^\/_\//, /^\/realtime/, /^\/push\//],
 })
 registerRoute(navigationRoute)

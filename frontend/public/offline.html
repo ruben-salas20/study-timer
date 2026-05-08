@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#84a98c" />
+    <title>Sin conexión — Study Timer</title>
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
+    <style>
+      :root {
+        --bg: #fbfaf7;
+        --ink: #181715;
+        --muted: #8a8780;
+        --accent: #84a98c;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e0d0b;
+          --ink: #f5f3ee;
+          --muted: #7a7770;
+        }
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 380px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+      .icon {
+        width: 64px;
+        height: 64px;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        opacity: 0.7;
+      }
+      .icon::before {
+        content: "";
+        width: 28px;
+        height: 28px;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        border-top-color: transparent;
+        border-right-color: transparent;
+        opacity: 0.4;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      p {
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      .hint {
+        font-size: 13px;
+        background: var(--accent);
+        color: white;
+        opacity: 0.95;
+        padding: 10px 18px;
+        border-radius: 999px;
+      }
+      button {
+        background: transparent;
+        border: 1.5px solid currentColor;
+        color: var(--ink);
+        padding: 10px 22px;
+        border-radius: 999px;
+        font: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.15s;
+      }
+      button:hover { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="icon"></div>
+      <h1>Sin conexión</h1>
+      <p>
+        No podemos contactar el servidor en este momento.
+        Tus sesiones de timer en curso siguen funcionando localmente —
+        cuando vuelva la conexión todo se sincroniza solo.
+      </p>
+      <span class="hint">Verificá tu Wi-Fi o datos móviles</span>
+      <button onclick="location.reload()">Reintentar</button>
+    </div>
+    <script>
+      // Auto-retry when connection comes back
+      window.addEventListener('online', () => {
+        location.reload()
+      })
+    </script>
+  </body>
+</html>

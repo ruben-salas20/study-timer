@@ -13,6 +13,11 @@ import { createSession, endSession, getSession } from '../api/sessions'
 import type { TimerMode } from '../api/sessions'
 import type { PomodoroConfig } from '../schemas'
 import pb from '@/shared/pb'
+import {
+  alertWorkPhaseEnded,
+  alertBreakEnded,
+  alertSessionComplete,
+} from '@/shared/lib/alerts'
 
 export interface StartOptions {
   /** For countdown mode: total seconds to count down from */
@@ -87,6 +92,7 @@ export function useTimer(options: UseTimerOptions = {}) {
       if (remaining === 0) {
         clearTick()
         useTimerStore.getState().setStatus('completed')
+        alertSessionComplete('countdown')
         onCompleteRef.current?.()
       }
       return
@@ -110,7 +116,8 @@ export function useTimer(options: UseTimerOptions = {}) {
       if (remaining === 0) {
         // Transition: work → break or break → next cycle / complete
         if (state.pomodoroPhase === 'work') {
-          // Move to break
+          // Move to break — soft chime
+          alertWorkPhaseEnded()
           useTimerStore.getState().setPomodoroPhase('break')
           useTimerStore.getState().setElapsedSec(0)
           useTimerStore.getState().setRemainingSec(cfg.breakMin * 60)
@@ -118,11 +125,14 @@ export function useTimer(options: UseTimerOptions = {}) {
           // End of break — move to next cycle
           const nextCycle = state.currentCycle + 1
           if (nextCycle > state.totalCycles) {
-            // All cycles done
+            // All cycles done — strong chime
             clearTick()
             useTimerStore.getState().setStatus('completed')
+            alertSessionComplete('pomodoro')
             onCompleteRef.current?.()
           } else {
+            // Next cycle starts — normal chime
+            alertBreakEnded()
             useTimerStore.getState().setCurrentCycle(nextCycle)
             useTimerStore.getState().setPomodoroPhase('work')
             useTimerStore.getState().setElapsedSec(0)
