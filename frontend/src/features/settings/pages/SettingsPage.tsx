@@ -190,17 +190,20 @@ export function SettingsPage() {
               onClick={() => handleToggleAlerts(!timerAlerts)}
               role="switch"
               aria-checked={timerAlerts}
-              className={[
-                'relative w-11 h-6 rounded-full transition-colors',
-                timerAlerts ? 'bg-(--color-primary)' : 'bg-current/20',
-              ].join(' ')}
               aria-label={timerAlerts ? 'Desactivar alertas' : 'Activar alertas'}
+              className={[
+                'relative shrink-0 rounded-full transition-colors duration-200',
+                timerAlerts ? 'bg-(--color-primary)' : 'bg-current/25',
+              ].join(' ')}
+              style={{ width: '44px', height: '24px' }}
             >
               <span
-                className={[
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                  timerAlerts ? 'translate-x-6' : 'translate-x-1',
-                ].join(' ')}
+                className="absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200"
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  left: timerAlerts ? '23px' : '3px',
+                }}
               />
             </button>
           </div>
