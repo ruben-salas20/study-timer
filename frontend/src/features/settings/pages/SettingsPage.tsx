@@ -265,12 +265,23 @@ export function SettingsPage() {
               <span className="opacity-60">Versión</span>
               <span className="font-mono">{APP_VERSION}</span>
             </div>
-            <a
-              href={`mailto:${user?.email ?? 'soporte@studytimer.app'}?subject=Reporte%20de%20problema%20Study%20Timer%20v${APP_VERSION}`}
-              className="py-2 text-(--color-primary) font-medium"
-            >
-              Reportar problema →
-            </a>
+            <p className="text-xs opacity-50 mt-2">¿Algún problema o sugerencia?</p>
+            <div className="flex flex-col gap-2">
+              <a
+                href={`mailto:rubensalas0907@gmail.com?subject=${encodeURIComponent(`Study Timer v${APP_VERSION} - Reporte`)}&body=${encodeURIComponent(`\n\n---\nUsuario: ${user?.email ?? ''}\nVersión: ${APP_VERSION}`)}`}
+                className="py-2 text-(--color-primary) font-medium"
+              >
+                Reportar por email →
+              </a>
+              <a
+                href={`https://wa.me/573202784994?text=${encodeURIComponent(`Hola, te escribo por Study Timer v${APP_VERSION}. `)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 text-(--color-primary) font-medium"
+              >
+                Reportar por WhatsApp →
+              </a>
+            </div>
           </div>
         </section>
 
