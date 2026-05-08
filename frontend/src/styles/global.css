@@ -168,3 +168,7 @@ button:active:not(:disabled), a[role="button"]:active {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+/* ─── Hide scrollbar utility (used by WheelPicker) ──────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }

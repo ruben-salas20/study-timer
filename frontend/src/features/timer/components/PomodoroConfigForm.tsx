@@ -1,8 +1,8 @@
-// PomodoroConfigForm.tsx — Pomodoro configuration form (RHF + Zod)
+// PomodoroConfigForm.tsx — Pomodoro configuration form using WheelPicker.
 // Fields: workMin (1-90), breakMin (1-60), cycles (1-12)
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { pomodoroConfigSchema, type PomodoroConfig } from '../schemas'
+import { useState } from 'react'
+import { WheelPicker } from '@/shared/ui/WheelPicker'
+import type { PomodoroConfig } from '../schemas'
 
 interface PomodoroConfigFormProps {
   defaultValues?: Partial<PomodoroConfig>
@@ -10,75 +10,62 @@ interface PomodoroConfigFormProps {
   onCancel?: () => void
 }
 
+const WORK_VALUES = Array.from({ length: 90 }, (_, i) => i + 1) // 1..90
+const BREAK_VALUES = Array.from({ length: 60 }, (_, i) => i + 1) // 1..60
+const CYCLE_VALUES = Array.from({ length: 12 }, (_, i) => i + 1) // 1..12
+
 export function PomodoroConfigForm({
   defaultValues,
   onSubmit,
   onCancel,
 }: PomodoroConfigFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<PomodoroConfig>({
-    resolver: zodResolver(pomodoroConfigSchema),
-    defaultValues: {
-      workMin: defaultValues?.workMin ?? 25,
-      breakMin: defaultValues?.breakMin ?? 5,
-      cycles: defaultValues?.cycles ?? 4,
-    },
-  })
+  const [workMin, setWorkMin] = useState(defaultValues?.workMin ?? 25)
+  const [breakMin, setBreakMin] = useState(defaultValues?.breakMin ?? 5)
+  const [cycles, setCycles] = useState(defaultValues?.cycles ?? 4)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    onSubmit({ workMin, breakMin, cycles })
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="workMin" className="text-sm font-medium">
-          Trabajo (minutos)
-        </label>
-        <input
-          id="workMin"
-          type="number"
-          min={1}
-          max={90}
-          {...register('workMin', { valueAsNumber: true })}
-          className="rounded-xl border border-current/20 bg-(--color-surface-raised) px-4 py-2.5 text-base"
-        />
-        {errors.workMin && (
-          <p className="text-xs text-red-500">{errors.workMin.message}</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="breakMin" className="text-sm font-medium">
-          Descanso (minutos)
-        </label>
-        <input
-          id="breakMin"
-          type="number"
-          min={1}
-          max={60}
-          {...register('breakMin', { valueAsNumber: true })}
-          className="rounded-xl border border-current/20 bg-(--color-surface-raised) px-4 py-2.5 text-base"
-        />
-        {errors.breakMin && (
-          <p className="text-xs text-red-500">{errors.breakMin.message}</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="cycles" className="text-sm font-medium">
-          Ciclos
-        </label>
-        <input
-          id="cycles"
-          type="number"
-          min={1}
-          max={12}
-          {...register('cycles', { valueAsNumber: true })}
-          className="rounded-xl border border-current/20 bg-(--color-surface-raised) px-4 py-2.5 text-base"
-        />
-        {errors.cycles && (
-          <p className="text-xs text-red-500">{errors.cycles.message}</p>
-        )}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col items-center gap-1">
+          <label className="text-xs uppercase tracking-widest opacity-60">
+            Trabajo
+          </label>
+          <WheelPicker
+            values={WORK_VALUES}
+            value={workMin}
+            onChange={setWorkMin}
+            suffix="min"
+            ariaLabel="Minutos de trabajo"
+          />
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <label className="text-xs uppercase tracking-widest opacity-60">
+            Descanso
+          </label>
+          <WheelPicker
+            values={BREAK_VALUES}
+            value={breakMin}
+            onChange={setBreakMin}
+            suffix="min"
+            ariaLabel="Minutos de descanso"
+          />
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <label className="text-xs uppercase tracking-widest opacity-60">
+            Ciclos
+          </label>
+          <WheelPicker
+            values={CYCLE_VALUES}
+            value={cycles}
+            onChange={setCycles}
+            ariaLabel="Cantidad de ciclos"
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 mt-2">

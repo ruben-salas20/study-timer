@@ -2,11 +2,12 @@
 // Shows the running timer with play/pause/stop controls.
 // On stop: confirm modal → navigate back to /home.
 // Modo Focus is a visual-only toggle in F2.
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Pause, Square, Focus } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { TimerDisplay } from '../components/TimerDisplay'
+import { TimerRing } from '../components/TimerRing'
 
 function ConfirmStopModal({
   onConfirm,
@@ -60,11 +61,25 @@ function ConfirmStopModal({
 
 export function ActiveSessionPage() {
   const navigate = useNavigate()
-  const { status, mode, elapsedSec, remainingSec, currentCycle, isPaused, pause, resume, stop } =
+  const { status, mode, elapsedSec, remainingSec, currentCycle, pomodoroPhase, isPaused, pause, resume, stop } =
     useTimer()
 
   const [showConfirmStop, setShowConfirmStop] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
+  const [pulse, setPulse] = useState(false)
+  const ringRef = useRef<HTMLDivElement>(null)
+
+  // Trigger pulse animation when pomodoro phase changes
+  const prevPhase = useRef(pomodoroPhase)
+  useEffect(() => {
+    if (prevPhase.current !== pomodoroPhase && mode === 'pomodoro') {
+      setPulse(true)
+      const t = setTimeout(() => setPulse(false), 700)
+      prevPhase.current = pomodoroPhase
+      return () => clearTimeout(t)
+    }
+    prevPhase.current = pomodoroPhase
+  }, [pomodoroPhase, mode])
 
   // If there's no active session (e.g., direct URL access), go back
   if (status === 'idle') {
@@ -75,9 +90,14 @@ export function ActiveSessionPage() {
   // Displayed seconds: countdown shows remaining, stopwatch shows elapsed
   const displaySec = mode === 'stopwatch' ? elapsedSec : remainingSec
 
+  // Progress 0..1 for the ring. Stopwatch has no natural end → no ring.
+  const phaseTotal = elapsedSec + remainingSec
+  const progress = phaseTotal > 0 ? elapsedSec / phaseTotal : 0
+  const showRing = mode === 'pomodoro' || mode === 'countdown'
+
   const modeLabel =
     mode === 'pomodoro'
-      ? `Pomodoro · Ciclo ${currentCycle}`
+      ? `Pomodoro · Ciclo ${currentCycle} · ${pomodoroPhase === 'work' ? 'Trabajo' : 'Descanso'}`
       : mode === 'countdown'
         ? 'Cuenta regresiva'
         : 'Cronómetro'
@@ -116,10 +136,21 @@ export function ActiveSessionPage() {
 
       {/* Timer display */}
       <div className="flex flex-col items-center gap-4 flex-1 justify-center">
-        <TimerDisplay
-          seconds={displaySec}
-          className="text-8xl font-bold tracking-tight"
-        />
+        <div ref={ringRef} className={pulse ? 'phase-pulse rounded-full' : ''}>
+          {showRing ? (
+            <TimerRing progress={progress} size={280} stroke={8}>
+              <TimerDisplay
+                seconds={displaySec}
+                className="text-7xl font-bold tracking-tight"
+              />
+            </TimerRing>
+          ) : (
+            <TimerDisplay
+              seconds={displaySec}
+              className="text-8xl font-bold tracking-tight"
+            />
+          )}
+        </div>
         {status === 'paused' && (
           <span className="text-sm opacity-60 uppercase tracking-widest">
             Pausado

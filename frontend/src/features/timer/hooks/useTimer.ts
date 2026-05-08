@@ -333,6 +333,7 @@ export function useTimer(options: UseTimerOptions = {}) {
     elapsedSec: store.elapsedSec,
     remainingSec: store.remainingSec,
     currentCycle: store.currentCycle,
+    pomodoroPhase: store.pomodoroPhase,
     isPaused: store.isPaused,
     sessionId: store.sessionId,
     start,

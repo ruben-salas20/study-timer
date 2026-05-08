@@ -1,8 +1,8 @@
-// CountdownConfigForm.tsx — Countdown configuration form (RHF + Zod)
+// CountdownConfigForm.tsx — Countdown configuration form using WheelPicker.
 // Field: targetMin (1-180)
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { countdownConfigSchema, type CountdownConfig } from '../schemas'
+import { useState } from 'react'
+import { WheelPicker } from '@/shared/ui/WheelPicker'
+import type { CountdownConfig } from '../schemas'
 
 interface CountdownConfigFormProps {
   defaultValues?: Partial<CountdownConfig>
@@ -10,39 +10,33 @@ interface CountdownConfigFormProps {
   onCancel?: () => void
 }
 
+const MINUTE_VALUES = Array.from({ length: 180 }, (_, i) => i + 1) // 1..180
+
 export function CountdownConfigForm({
   defaultValues,
   onSubmit,
   onCancel,
 }: CountdownConfigFormProps) {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CountdownConfig>({
-    resolver: zodResolver(countdownConfigSchema),
-    defaultValues: {
-      targetMin: defaultValues?.targetMin ?? 45,
-    },
-  })
+  const [targetMin, setTargetMin] = useState(defaultValues?.targetMin ?? 45)
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    onSubmit({ targetMin })
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="targetMin" className="text-sm font-medium">
-          Duración (minutos)
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col items-center gap-1">
+        <label className="text-xs uppercase tracking-widest opacity-60">
+          Duración
         </label>
-        <input
-          id="targetMin"
-          type="number"
-          min={1}
-          max={180}
-          {...register('targetMin', { valueAsNumber: true })}
-          className="rounded-xl border border-current/20 bg-(--color-surface-raised) px-4 py-2.5 text-base"
+        <WheelPicker
+          values={MINUTE_VALUES}
+          value={targetMin}
+          onChange={setTargetMin}
+          suffix="min"
+          ariaLabel="Duración en minutos"
         />
-        {errors.targetMin && (
-          <p className="text-xs text-red-500">{errors.targetMin.message}</p>
-        )}
       </div>
 
       <div className="flex gap-3 mt-2">
