@@ -12,6 +12,7 @@ import type { ChallengeRecord } from '../api/challenges'
 
 export function ChallengesPage() {
   const { data: challenges = [], isLoading } = useMyChallenges()
+  const [showFinished, setShowFinished] = useState(false)
   const [showCancelled, setShowCancelled] = useState(false)
 
   const active = challenges.filter((c) => c.status === 'active')
@@ -77,15 +78,25 @@ export function ChallengesPage() {
           </section>
         )}
 
-        {/* ── Finalizados ──────────────────────────────────────────────── */}
+        {/* ── Finalizados (colapsable) ─────────────────────────────────── */}
         {!isLoading && finished.length > 0 && (
           <section>
-            <h2 className="text-xs uppercase tracking-widest opacity-50 mb-3">Finalizados</h2>
-            <div className="flex flex-col gap-2">
-              {finished.map((c) => (
-                <ChallengeCard key={c.id} challenge={toCardData(c)} />
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowFinished((v) => !v)}
+              className="flex items-center justify-between w-full text-xs uppercase tracking-widest opacity-50 mb-3 hover:opacity-80"
+              aria-expanded={showFinished}
+            >
+              <span>Finalizados ({finished.length})</span>
+              {showFinished ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showFinished && (
+              <div className="flex flex-col gap-2">
+                {finished.map((c) => (
+                  <ChallengeCard key={c.id} challenge={toCardData(c)} />
+                ))}
+              </div>
+            )}
           </section>
         )}
 
