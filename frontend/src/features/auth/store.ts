@@ -13,7 +13,7 @@ interface AuthUser {
   weeklyGoalMinutes?: number
   timezone?: string
   theme?: 'auto' | 'light' | 'dark'
-  accentColor?: 'sage' | 'blue' | 'warm' | 'mono'
+  accentColor?: 'sage' | 'blue' | 'warm' | 'mono' | 'rose'
   [key: string]: unknown
 }
 

@@ -18,7 +18,7 @@ import {
 } from '@/shared/lib/alerts'
 
 type Theme = 'auto' | 'light' | 'dark'
-type AccentColor = 'sage' | 'blue' | 'warm' | 'mono'
+type AccentColor = 'sage' | 'blue' | 'warm' | 'mono' | 'rose'
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: 'auto', label: 'Auto' },
@@ -31,6 +31,7 @@ const ACCENT_OPTIONS: { value: AccentColor; label: string }[] = [
   { value: 'blue', label: 'Blue' },
   { value: 'warm', label: 'Warm' },
   { value: 'mono', label: 'Mono' },
+  { value: 'rose', label: 'Rose' },
 ]
 
 // Top 20 IANA timezones most commonly used
