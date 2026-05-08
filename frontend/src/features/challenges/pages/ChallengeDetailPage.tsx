@@ -92,7 +92,7 @@ export function ChallengeDetailPage() {
   // ── Early returns (after all hooks) ─────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center">
+      <div className="flex flex-col h-dvh bg-background text-foreground items-center justify-center">
         <p className="opacity-50">Cargando reto...</p>
       </div>
     )
@@ -100,7 +100,7 @@ export function ChallengeDetailPage() {
 
   if (error || !challenge) {
     return (
-      <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center gap-4">
+      <div className="flex flex-col h-dvh bg-background text-foreground items-center justify-center gap-4">
         <p className="opacity-50">Reto no encontrado</p>
         <button onClick={() => navigate('/challenges')} className="text-sm text-(--color-primary)">
           ← Volver a retos
@@ -138,7 +138,7 @@ export function ChallengeDetailPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col h-dvh bg-background text-foreground">
       {/* Header */}
       <header className="flex items-center gap-4 px-6 pt-10 pb-4">
         <button
@@ -157,7 +157,7 @@ export function ChallengeDetailPage() {
         </div>
       </header>
 
-      <main className="flex flex-col flex-1 px-6 pb-24 gap-6 overflow-y-auto">
+      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pb-4 gap-6">
 
         {/* Dates */}
         <div className="flex gap-4 text-xs opacity-50">

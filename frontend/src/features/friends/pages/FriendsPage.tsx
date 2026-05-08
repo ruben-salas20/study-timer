@@ -37,7 +37,7 @@ export function FriendsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div className="flex flex-col h-dvh bg-background text-foreground">
       {/* Header */}
       <header className="flex items-center justify-between px-6 pt-10 pb-4">
         <h1 className="text-2xl font-bold">Amigos</h1>
@@ -50,7 +50,7 @@ export function FriendsPage() {
         </Link>
       </header>
 
-      <main className="flex flex-col flex-1 px-6 pb-4 gap-6 overflow-y-auto">
+      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pb-4 gap-6">
 
         {/* ── Ranking semanal ──────────────────────────────────────────── */}
         <section>
