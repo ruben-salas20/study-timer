@@ -28,15 +28,21 @@ function AuthRefreshEffect() {
       if (!pb.authStore.isValid) return
       try {
         await pb.collection('users').authRefresh()
-      } catch {
-        // Token rejected by server — clear so the user gets a clean re-login flow
-        pb.authStore.clear()
+      } catch (err) {
+        // Only clear the auth on AUTH failures (401/403). Network failures
+        // (offline, server unreachable, timeout) should NOT log the user out —
+        // the cached token is still valid and they can keep using the app.
+        const status = (err as { status?: number; response?: { status?: number } })?.status
+          ?? (err as { response?: { status?: number } })?.response?.status
+        if (status === 401 || status === 403) {
+          pb.authStore.clear()
+        }
+        // else: ignore — auth stays as-is from localStorage
       }
     }
 
     void refresh()
 
-    // Re-validate when the user comes back to the app after backgrounding
     const onVisibility = () => {
       if (document.visibilityState === 'visible') void refresh()
     }

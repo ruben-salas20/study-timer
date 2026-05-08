@@ -172,3 +172,20 @@ button:active:not(:disabled), a[role="button"]:active {
 /* ─── Hide scrollbar utility (used by WheelPicker) ──────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* ─── Pull-to-refresh + bounce containment ──────────────────────────────── */
+/* Prevent native browser pull-to-refresh and elastic bounce from breaking
+   the dvh layout. Pages should never reload by swipe-down — that was bouncing
+   the layout taller than the viewport and forcing manual scrolling. */
+html, body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Lock the html/body to dvh so the viewport is exact and the SPA owns scroll */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
