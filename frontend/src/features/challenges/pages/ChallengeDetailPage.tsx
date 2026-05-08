@@ -102,10 +102,13 @@ export function ChallengeDetailPage() {
   const canCancel = isCreator && challenge.status === 'pending'
   const canLeave = !!myParticipant && !isCreator
 
-  // For getUserName: since we don't expand user details in this simplified version,
-  // we use userId as fallback. A richer version would expand the user relation.
+  // Resolve user names from the expanded participant records (set in mapChallenge)
+  const userNamesById = new Map<string, string>(
+    challenge.participants.map((p) => [p.user, p.userDisplayName])
+  )
   function getUserName(userId: string): string {
-    return userId === myId ? 'Tú' : `Usuario ${userId.slice(0, 6)}`
+    if (userId === myId) return 'Tú'
+    return userNamesById.get(userId) || `Usuario ${userId.slice(0, 6)}`
   }
 
   // For group_streak: fetch sessions for all participants and compute streak
@@ -210,22 +213,24 @@ export function ChallengeDetailPage() {
             Participantes ({challenge.participants.length})
           </h2>
           <div className="flex flex-col gap-2">
-            {challenge.participants.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-2"
-              >
-                <div className="w-7 h-7 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-xs font-bold">
-                  {p.user.charAt(0).toUpperCase()}
+            {challenge.participants.map((p) => {
+              const name = p.user === myId ? 'Tú' : p.userDisplayName
+              const initial = (p.user === myId ? 'T' : p.userDisplayName).charAt(0).toUpperCase()
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-2"
+                >
+                  <div className="w-7 h-7 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-xs font-bold">
+                    {initial}
+                  </div>
+                  <span className="text-sm flex-1">{name}</span>
+                  {challenge.createdBy === p.user && (
+                    <span className="text-[10px] opacity-40">creador</span>
+                  )}
                 </div>
-                <span className="text-sm flex-1">
-                  {p.user === myId ? 'Tú' : `Usuario ${p.user.slice(0, 6)}`}
-                </span>
-                {challenge.createdBy === p.user && (
-                  <span className="text-[10px] opacity-40">creador</span>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 

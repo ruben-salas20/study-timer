@@ -34,7 +34,9 @@ export function useFriendsList() {
   const query = useQuery({
     queryKey: FRIENDS_KEYS.list,
     queryFn: listFriends,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!myId && pb.authStore.isValid,
   })
 
@@ -64,7 +66,9 @@ export function useIncomingRequests() {
   return useQuery({
     queryKey: FRIENDS_KEYS.incoming,
     queryFn: listIncomingRequests,
-    staleTime: 30 * 1000,
+    staleTime: 15 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!myId && pb.authStore.isValid,
   })
 }
@@ -76,7 +80,9 @@ export function useOutgoingRequests() {
   return useQuery({
     queryKey: FRIENDS_KEYS.outgoing,
     queryFn: listOutgoingRequests,
-    staleTime: 30 * 1000,
+    staleTime: 15 * 1000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     enabled: !!myId && pb.authStore.isValid,
   })
 }

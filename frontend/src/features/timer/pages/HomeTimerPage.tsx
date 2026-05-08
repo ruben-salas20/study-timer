@@ -11,7 +11,7 @@ import { useTimer } from '../hooks/useTimer'
 import { ModeCard } from '../components/ModeCard'
 import { PomodoroConfigForm } from '../components/PomodoroConfigForm'
 import { CountdownConfigForm } from '../components/CountdownConfigForm'
-import { useTodayStats } from '../hooks/useTodayStats'
+import { useStats } from '@/features/stats/hooks/useStats'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
@@ -21,7 +21,9 @@ export function HomeTimerPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { start } = useTimer()
-  const { todaySec, weekSec } = useTodayStats()
+  // Same source of truth as the Stats page — derives today/week from a single
+  // 90-day session fetch. Avoids the divergence we had with a separate hook.
+  const { todaySec, weekSec } = useStats(user?.timezone as string ?? 'UTC')
 
   const [selectedMode, setSelectedMode] = useState<ModeSelection>(null)
 

@@ -35,6 +35,10 @@ export interface ParticipantRecord {
   id: string
   challenge: string
   user: string
+  /** Resolved display name from expand. Falls back to "Usuario XXXXXX" if not expanded. */
+  userDisplayName: string
+  /** Resolved friendCode from expand (optional). */
+  userFriendCode?: string
   joinedAt: string
   progressSec: number
   streakDays: number
@@ -61,14 +65,26 @@ function currentUserId(): string {
 
 function mapChallenge(record: Record<string, unknown>): ChallengeRecord {
   const expand = record.expand as Record<string, unknown[]> | undefined
-  const rawParticipants = expand?.['challenge_participants(challenge)'] ?? []
+  const rawParticipants = expand?.['challenge_participants_via_challenge'] ??
+    expand?.['challenge_participants(challenge)'] ??
+    []
 
   const participants: ParticipantRecord[] = rawParticipants.map((p) => {
     const part = p as Record<string, unknown>
+    const partExpand = part.expand as Record<string, unknown> | undefined
+    const userObj = partExpand?.user as Record<string, unknown> | undefined
+    const userId = part.user as string
+
+    const displayName = (userObj?.displayName as string) ||
+      `Usuario ${userId.slice(0, 6)}`
+    const friendCode = userObj?.friendCode as string | undefined
+
     return {
       id: part.id as string,
       challenge: part.challenge as string,
-      user: part.user as string,
+      user: userId,
+      userDisplayName: displayName,
+      userFriendCode: friendCode,
       joinedAt: part.joinedAt as string,
       progressSec: Number(part.progressSec ?? 0),
       streakDays: Number(part.streakDays ?? 0),
@@ -92,7 +108,9 @@ function mapChallenge(record: Record<string, unknown>): ChallengeRecord {
   }
 }
 
-const EXPAND = 'challenge_participants(challenge),challenge_participants(challenge).user'
+// PB 0.23 back-relation syntax: `<collection>_via_<field>`
+// Combined with `.user` it expands the user record per participant.
+const EXPAND = 'challenge_participants_via_challenge,challenge_participants_via_challenge.user'
 
 // ── API functions ─────────────────────────────────────────────────────────────
 

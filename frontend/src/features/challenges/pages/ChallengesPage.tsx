@@ -1,8 +1,8 @@
 // ChallengesPage.tsx — Main challenges screen at /challenges
-// Sections: active, pending, completed/cancelled (last 10).
-// F8: EmptyState + Skeleton loading states.
+// Sections: active, pending, finished (completed), cancelled (collapsible).
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useMyChallenges } from '../hooks/useChallenges'
 import { ChallengeCard } from '../components/ChallengeCard'
 import { BottomNav } from '@/shared/ui/BottomNav'
@@ -12,12 +12,12 @@ import type { ChallengeRecord } from '../api/challenges'
 
 export function ChallengesPage() {
   const { data: challenges = [], isLoading } = useMyChallenges()
+  const [showCancelled, setShowCancelled] = useState(false)
 
   const active = challenges.filter((c) => c.status === 'active')
   const pending = challenges.filter((c) => c.status === 'pending')
-  const finished = challenges
-    .filter((c) => c.status === 'completed' || c.status === 'cancelled')
-    .slice(0, 10)
+  const finished = challenges.filter((c) => c.status === 'completed').slice(0, 10)
+  const cancelled = challenges.filter((c) => c.status === 'cancelled').slice(0, 20)
 
   function toCardData(c: ChallengeRecord) {
     return {
@@ -86,6 +86,28 @@ export function ChallengesPage() {
                 <ChallengeCard key={c.id} challenge={toCardData(c)} />
               ))}
             </div>
+          </section>
+        )}
+
+        {/* ── Cancelados (colapsable) ──────────────────────────────────── */}
+        {!isLoading && cancelled.length > 0 && (
+          <section>
+            <button
+              type="button"
+              onClick={() => setShowCancelled((v) => !v)}
+              className="flex items-center justify-between w-full text-xs uppercase tracking-widest opacity-50 mb-3 hover:opacity-80"
+              aria-expanded={showCancelled}
+            >
+              <span>Cancelados ({cancelled.length})</span>
+              {showCancelled ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showCancelled && (
+              <div className="flex flex-col gap-2 opacity-60">
+                {cancelled.map((c) => (
+                  <ChallengeCard key={c.id} challenge={toCardData(c)} />
+                ))}
+              </div>
+            )}
           </section>
         )}
 
