@@ -134,28 +134,39 @@ export function useWeeklyRanking() {
       const cutoffStr = cutoff.toISOString().replace('T', ' ').substring(0, 19)
 
       const sessionResults = await Promise.all(
-        allUsers.map((u) =>
-          pb
-            .collection('study_sessions')
-            .getList(1, 500, {
+        allUsers.map(async (u) => {
+          try {
+            return await pb.collection('study_sessions').getList(1, 500, {
               filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${cutoffStr}"`,
             })
-            .catch(() => ({ items: [] as Array<Record<string, unknown>> }))
-        )
+          } catch (err) {
+            console.error(`[useWeeklyRanking] Failed to fetch sessions for user ${u.id}:`, err)
+            return { items: [] as Array<Record<string, unknown>> }
+          }
+        })
       )
 
-      return sessionResults.flatMap((res) =>
+      const flat = sessionResults.flatMap((res) =>
         (res.items as Array<Record<string, unknown>>).map((item) => ({
           user: item.user as string,
           startedAt: item.startedAt as string,
           endedAt: item.endedAt as string,
-          durationSec: (item.durationSec as number) ?? 0,
+          durationSec: Number(item.durationSec ?? 0),
           mode: (item.mode as StatsSession['mode']) ?? 'pomodoro',
         }))
       )
+      console.log(
+        `[useWeeklyRanking] fetched ${flat.length} sessions across ${allUsers.length} users`,
+        flat.slice(0, 3)
+      )
+      return flat
     },
     staleTime: 60 * 1000,
     enabled: !!myId && allUsers.length > 0 && pb.authStore.isValid,
+    // Keep previous data visible while a new fetch is in flight (e.g. when
+    // friendEntries grows from [] to [friend], the queryKey changes; without
+    // this, the data briefly drops to [] and ranking shows everyone at 0).
+    placeholderData: (previousData) => previousData,
   })
 
   // Compute ranking by per-user week total, using the SAME week-boundary logic
