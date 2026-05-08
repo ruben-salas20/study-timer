@@ -12,6 +12,8 @@ import {
   computeStreakDays,
   computeBestDay,
   computeWeekTotal,
+  todayKey,
+  toLocalDateKey,
   type StatsSession,
 } from '../lib/aggregators'
 
@@ -91,16 +93,19 @@ export function useStats(tz = 'UTC') {
     const weekTotal = computeWeekTotal(sessions, tz)
     const allTime = sessions.reduce((s, sess) => s + sess.durationSec, 0)
 
-    // Today sessions
-    const todayKey = new Date().toISOString().slice(0, 10)
-    const todaySec = byDay.get(todayKey) ?? 0
+    // Today sessions — use the same timezone the byDay map was built with.
+    // Previously this used UTC slicing (`new Date().toISOString().slice(0, 10)`)
+    // which mismatched the local-tz keys in `byDay` whenever the user was in a
+    // non-UTC timezone, resulting in todaySec = 0 for several hours each day.
+    const todayK = todayKey(tz)
+    const todaySec = byDay.get(todayK) ?? 0
 
-    // last 14 days for chart
+    // last 14 days for chart — same fix: keys must be in the user's tz
     const chartData: Array<{ date: string; sec: number }> = []
     for (let i = 13; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = toLocalDateKey(d.toISOString(), tz)
       chartData.push({ date: key, sec: byDay.get(key) ?? 0 })
     }
 

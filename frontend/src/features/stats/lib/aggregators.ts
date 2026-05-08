@@ -56,11 +56,14 @@ function toLocalDateKey(isoString: string, tz: string): string {
 }
 
 /**
- * todayKey — returns today's date key in the given timezone.
+ * todayKey — returns today's date key (YYYY-MM-DD) in the given timezone.
  */
-function todayKey(tz: string): string {
+export function todayKey(tz: string): string {
   return toLocalDateKey(new Date().toISOString(), tz)
 }
+
+/** Re-exported helper. Same purpose as in module-private use. */
+export { toLocalDateKey }
 
 // ── groupSessionsByDay ────────────────────────────────────────────────────────
 
