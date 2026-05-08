@@ -2,7 +2,7 @@
 // Aggregates study_sessions for current user + accepted friends,
 // summed by user and sorted by totalSec desc.
 // Pure functions are exported separately for unit testing (TDD).
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import pb from '@/shared/pb'
 import { useFriendsList } from './useFriends'
@@ -115,7 +115,9 @@ export function useWeeklyRanking() {
 
   const allUserIdsKey = allUsers.map((u) => u.id).sort().join(',')
 
-  const { data: ranking = [], refetch } = useQuery({
+  const queryClient = useQueryClient()
+
+  const { data: ranking = [] } = useQuery({
     queryKey: ['friends', 'weeklyRanking', allUserIdsKey],
     queryFn: async (): Promise<RankingEntry[]> => {
       if (!myId || allUsers.length === 0) return []
@@ -147,18 +149,21 @@ export function useWeeklyRanking() {
     enabled: !!myId && pb.authStore.isValid,
   })
 
-  // Realtime: refetch when sessions change. Friendships changes invalidate
-  // useFriendsList's query, which in turn re-runs this hook via allUsers
-  // memo dependency — no need for a separate friendship subscription here.
+  // Realtime: invalidate when sessions change. We use queryClient (stable
+  // reference) instead of refetch (regenerated each render — caused the
+  // subscription to be torn down + re-created on every render, which
+  // flickered the query and sometimes left ranking stuck at 0).
   useEffect(() => {
     if (!myId) return
     let unsub: (() => void) | undefined
     void pb
       .collection('study_sessions')
-      .subscribe('*', () => void refetch())
+      .subscribe('*', () => {
+        void queryClient.invalidateQueries({ queryKey: ['friends', 'weeklyRanking'] })
+      })
       .then((fn) => { unsub = fn })
     return () => { unsub?.() }
-  }, [myId, refetch])
+  }, [myId, queryClient])
 
   return { ranking }
 }

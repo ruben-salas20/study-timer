@@ -58,10 +58,15 @@ export function FriendsPage() {
             Ranking semanal
           </h2>
 
-          {ranking.length === 0 ? (
+          {!friendsLoading && friends.length === 0 ? (
             <p className="text-sm opacity-50 text-center py-4">
-              Agrega amigos para ver el ranking
+              Agregá amigos para ver el ranking
             </p>
+          ) : ranking.length === 0 ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton height="3rem" />
+              <Skeleton height="3rem" />
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               {ranking.map((entry, idx) => (
