@@ -7,6 +7,7 @@ import { useEffect, useMemo } from 'react'
 import pb from '@/shared/pb'
 import { useFriendsList } from './useFriends'
 import type { FriendUserInfo } from '../api/friends'
+import { computeWeekTotal, type StatsSession } from '@/features/stats/lib/aggregators'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -116,26 +117,28 @@ export function useWeeklyRanking() {
   const allUserIdsKey = allUsers.map((u) => u.id).sort().join(',')
 
   const queryClient = useQueryClient()
+  const tz = (pb.authStore.model?.timezone as string | undefined) ?? 'UTC'
 
-  // Query JUST for sessions (not the computed ranking). This decouples the
-  // user list from session data so we can ALWAYS render the ranking — even
-  // if sessions are still loading or fail to fetch, users still appear with
-  // 0 minutes. Previously the queryFn computed the ranking inline; if any
-  // step threw, ranking stayed empty and the page got stuck on a skeleton.
+  // Fetch a wide window (30 days) per user. Filtering down to "this week"
+  // happens in JS via computeWeekTotal — same logic that the Stats page uses,
+  // so the numbers always match between FriendsPage ranking and StatsPage.
+  // Server-side filter with a wide net (30 days) avoids edge-of-week timezone
+  // mismatches.
   const { data: weekSessions = [] } = useQuery({
     queryKey: ['friends', 'weeklyRanking-sessions', allUserIdsKey],
-    queryFn: async (): Promise<SessionRecord[]> => {
+    queryFn: async (): Promise<Array<StatsSession & { user: string }>> => {
       if (!myId || allUsers.length === 0) return []
 
-      const weekStart = getISOWeekStart(new Date())
-      const weekStartStr = weekStart.toISOString().replace('T', ' ').substring(0, 19)
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - 30)
+      const cutoffStr = cutoff.toISOString().replace('T', ' ').substring(0, 19)
 
       const sessionResults = await Promise.all(
         allUsers.map((u) =>
           pb
             .collection('study_sessions')
             .getList(1, 500, {
-              filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${weekStartStr}"`,
+              filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${cutoffStr}"`,
             })
             .catch(() => ({ items: [] as Array<Record<string, unknown>> }))
         )
@@ -143,11 +146,11 @@ export function useWeeklyRanking() {
 
       return sessionResults.flatMap((res) =>
         (res.items as Array<Record<string, unknown>>).map((item) => ({
-          id: item.id as string,
           user: item.user as string,
-          durationSec: (item.durationSec as number) ?? 0,
           startedAt: item.startedAt as string,
           endedAt: item.endedAt as string,
+          durationSec: (item.durationSec as number) ?? 0,
+          mode: (item.mode as StatsSession['mode']) ?? 'pomodoro',
         }))
       )
     },
@@ -155,12 +158,28 @@ export function useWeeklyRanking() {
     enabled: !!myId && allUsers.length > 0 && pb.authStore.isValid,
   })
 
-  // ranking is computed synchronously from allUsers + sessions cache.
-  // Even before sessions load, allUsers are returned with 0 totalSec each.
+  // Compute ranking by per-user week total, using the SAME week-boundary logic
+  // as the Stats page. Numbers are guaranteed consistent.
   const ranking: RankingEntry[] = useMemo(() => {
     if (!myId || allUsers.length === 0) return []
-    return aggregateWeeklyRanking(weekSessions, allUsers, myId)
-  }, [myId, allUsers, weekSessions])
+
+    return allUsers
+      .map((u) => {
+        const userSessions = weekSessions
+          .filter((s) => s.user === u.id)
+          .map((s) => ({ startedAt: s.startedAt, endedAt: s.endedAt, durationSec: s.durationSec, mode: s.mode }))
+        const totalSec = computeWeekTotal(userSessions, tz, 'monday')
+        return {
+          userId: u.id,
+          displayName: u.displayName,
+          friendCode: u.friendCode,
+          avatarUrl: u.avatarUrl,
+          totalSec,
+          isMe: u.id === myId,
+        }
+      })
+      .sort((a, b) => b.totalSec - a.totalSec)
+  }, [myId, allUsers, weekSessions, tz])
 
   // Realtime: invalidate sessions cache when any session changes
   useEffect(() => {
