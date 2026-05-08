@@ -59,7 +59,17 @@ cronAdd("challenges-status-rollup", "*/1 * * * *", () => {
 
   // ── Job logic ──────────────────────────────────────────────────────────
 
-  const now = new Date().toISOString();
+  // PocketBase stores datetime values in SQLite as TEXT using a SPACE
+  // separator ("2026-05-08 22:21:00.000Z"). When a filter parameter is
+  // supplied as a regular ISO string ("2026-05-08T21:25:00.000Z" — with a
+  // 'T'), SQLite string-compares them char-by-char and " " (0x20) is always
+  // less than "T" (0x54). That made every "endsAt < now" comparison return
+  // true regardless of the real instant, so the cron completed every active
+  // challenge on its very next tick.
+  // Fix: format `now` with a space separator so both sides of the
+  // comparison use the same representation and the lexical order matches
+  // chronological order.
+  const now = new Date().toISOString().replace("T", " ");
 
   // pending → active (startsAt has passed)
   try {
