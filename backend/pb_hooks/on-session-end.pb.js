@@ -16,7 +16,10 @@ onRecordUpdate((e) => {
   const prevEndedAt = e.record.original().get("endedAt");
   const newEndedAt = e.record.get("endedAt");
 
+  console.log(`[on-session-end] FIRED sessionId=${e.record.id} prevEndedAt=${JSON.stringify(prevEndedAt)} newEndedAt=${JSON.stringify(newEndedAt)}`);
+
   if (!newEndedAt || prevEndedAt) {
+    console.log(`[on-session-end] SKIP — not a transition null→set`);
     e.next();
     return;
   }
@@ -24,10 +27,12 @@ onRecordUpdate((e) => {
   e.next();
 
   const durationSec = Number(e.record.get("durationSec") ?? 0);
+  console.log(`[on-session-end] durationSec=${durationSec}`);
   if (durationSec <= 0) return;
 
   const userId = e.record.get("user");
   if (!userId) return;
+  console.log(`[on-session-end] processing user=${userId}`);
 
   try {
     // Find all challenge_participants for this user
@@ -40,6 +45,8 @@ onRecordUpdate((e) => {
       { userId: userId }
     );
 
+    console.log(`[on-session-end] found ${participants.length} participant rows for user=${userId}`);
+
     for (const participant of participants) {
       const challengeId = participant.get("challenge");
       let challengeType = "";
@@ -50,8 +57,11 @@ onRecordUpdate((e) => {
         challengeType = challenge.get("type");
         challengeStatus = challenge.get("status");
       } catch (_) {
+        console.log(`[on-session-end] could not load challenge ${challengeId}, skip`);
         continue;
       }
+
+      console.log(`[on-session-end] challenge ${challengeId} type=${challengeType} status=${challengeStatus}`);
 
       // Only count progress for active challenges
       if (challengeStatus !== "active") continue;
@@ -59,10 +69,13 @@ onRecordUpdate((e) => {
       // Timed types: increment own progress
       if (challengeType === "race" || challengeType === "weekly_goal" || challengeType === "duel") {
         const currentProgress = Number(participant.get("progressSec") ?? 0);
-        participant.set("progressSec", currentProgress + durationSec);
+        const newProgress = currentProgress + durationSec;
+        participant.set("progressSec", newProgress);
+        console.log(`[on-session-end] participant ${participant.id} progressSec ${currentProgress} -> ${newProgress}`);
 
         try {
           e.app.save(participant);
+          console.log(`[on-session-end] saved participant ${participant.id}`);
         } catch (saveErr) {
           console.error(
             `[on-session-end] Failed to update progressSec for participant ${participant.id}:`,
