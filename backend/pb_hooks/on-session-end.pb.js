@@ -1,22 +1,13 @@
-// pb_hooks/on-session-end.js
-// Fires after a study_sessions record is updated (model-layer hook).
+// pb_hooks/on-session-end.pb.js
+// Fires after a study_sessions record is updated.
 //
 // Responsibility:
 //   - Detect when a session was just ended (endedAt transitioned null → non-null)
 //   - Find all active challenges where this user is a participant
 //   - For race / weekly_goal / duel: increment progressSec by session's durationSec
 //
-// group_streak note:
-//   For F4, streakDays is NOT mutated here. It is computed on-demand by frontend
-//   selectors from the user's session list. This avoids race conditions and keeps
-//   F4 shippable. See F4 scope in ARCHITECTURE.md §4.
-//
-// Security rationale:
-//   Only sessions with a valid durationSec (> 0) and a fresh endedAt are processed.
-//   The session's userId is taken from the server record, not the client request,
-//   preventing progress inflation by spoofed user ids.
-//
-// Reference: ARCHITECTURE.md §4, F4 scope.
+// IMPORTANT: PB 0.23 JSVM API — use $app.findRecordsByFilter, NOT $app.newExpr
+// or $app.query() (those are Go-only / not exposed in JSVM 0.23).
 
 /// <reference path="../pb_data/types.d.ts" />
 
@@ -26,7 +17,6 @@ onRecordUpdate((e) => {
   const newEndedAt = e.record.get("endedAt");
 
   if (!newEndedAt || prevEndedAt) {
-    // Session not freshly ended — skip
     e.next();
     return;
   }
@@ -40,30 +30,31 @@ onRecordUpdate((e) => {
   if (!userId) return;
 
   try {
-    // Find all challenge_participants for this user whose challenge is active
-    const participantRecords = e.app.findAllRecords("challenge_participants",
-      e.app.query()
-        .andWhere(
-          e.app.newExpr("user = {:userId}", { userId })
-        )
-        .andWhere(
-          e.app.newExpr(
-            "challenge IN (SELECT id FROM challenges WHERE status = 'active')"
-          )
-        )
+    // Find all challenge_participants for this user
+    const participants = e.app.findRecordsByFilter(
+      "challenge_participants",
+      "user = {:userId}",
+      "",
+      200,
+      0,
+      { userId: userId }
     );
 
-    for (const participant of participantRecords) {
-      // Resolve challenge type
+    for (const participant of participants) {
       const challengeId = participant.get("challenge");
       let challengeType = "";
+      let challengeStatus = "";
 
       try {
         const challenge = e.app.findRecordById("challenges", challengeId);
         challengeType = challenge.get("type");
-      } catch {
-        continue; // Challenge not found — skip
+        challengeStatus = challenge.get("status");
+      } catch (_) {
+        continue;
       }
+
+      // Only count progress for active challenges
+      if (challengeStatus !== "active") continue;
 
       // Only increment progressSec for timed types
       if (challengeType === "race" || challengeType === "weekly_goal" || challengeType === "duel") {
@@ -79,7 +70,7 @@ onRecordUpdate((e) => {
           );
         }
       }
-      // group_streak: computed on-demand in frontend — no mutation here (F4)
+      // group_streak: computed on-demand in frontend — no mutation here
     }
   } catch (err) {
     console.error("[on-session-end] Error processing challenge progress:", err);

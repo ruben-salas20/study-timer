@@ -1,28 +1,29 @@
 // pb_hooks/crons.pb.js
 // Scheduled jobs for the study-timer application.
 //
-// challenges-status-rollup — runs every 5 minutes:
+// challenges-status-rollup — runs every minute:
 //   - pending  → active    when startsAt <= now
 //   - active   → completed when endsAt < now
 //
-// [F6] Push notifications are dispatched on status transitions.
-//
 // IMPORTANT: goja JSVM isolates each callback's scope. All helpers must be
 // defined INSIDE the callback that uses them.
+//
+// PB 0.23 API note:
+//   $app.findRecordsByFilter(collection, filter, sort, limit, offset, params)
+//   is the documented way to query. There is no $app.newExpr() in JSVM.
 
 /// <reference path="../pb_data/types.d.ts" />
 
-cronAdd("challenges-status-rollup", "*/5 * * * *", () => {
+cronAdd("challenges-status-rollup", "*/1 * * * *", () => {
   // ── Inline helpers (goja JSVM scope isolation) ──────────────────────────
 
-  function dispatchPush(app, userId, payload) {
+  function dispatchPush(userId, payload) {
     try {
       const pushServiceUrl = $os.getenv("PUSH_SERVICE_URL") || "http://push-service:3001";
       const pushServiceToken = $os.getenv("PUSH_SERVICE_TOKEN") || "";
+      if (!pushServiceToken) return;
 
-      if (!pushServiceToken) return; // silently skip if not configured
-
-      const response = $http.send({
+      $http.send({
         url: `${pushServiceUrl}/dispatch`,
         method: "POST",
         headers: {
@@ -32,23 +33,24 @@ cronAdd("challenges-status-rollup", "*/5 * * * *", () => {
         body: JSON.stringify({ userId, payload }),
         timeout: 5,
       });
-
-      if (response.statusCode >= 400) {
-        console.error(`[crons] push-service ${response.statusCode} for user ${userId}`);
-      }
     } catch (err) {
       console.error("[crons] dispatchPush error:", err);
     }
   }
 
-  function notifyParticipants(app, challengeId, payload) {
+  function notifyParticipants(challengeId, payload) {
     try {
-      const participants = app.findAllRecords("challenge_participants",
-        app.newExpr('challenge = {:id}', { id: challengeId })
+      const participants = $app.findRecordsByFilter(
+        "challenge_participants",
+        "challenge = {:id}",
+        "",
+        100,
+        0,
+        { id: challengeId }
       );
       for (const p of participants) {
         const userId = p.get("user");
-        if (userId) dispatchPush(app, userId, payload);
+        if (userId) dispatchPush(userId, payload);
       }
     } catch (err) {
       console.error(`[crons] notifyParticipants failed for ${challengeId}:`, err);
@@ -59,17 +61,22 @@ cronAdd("challenges-status-rollup", "*/5 * * * *", () => {
 
   const now = new Date().toISOString();
 
-  // pending → active
+  // pending → active (startsAt has passed)
   try {
-    const toActivate = $app.findAllRecords("challenges",
-      $app.newExpr('status = "pending" && startsAt <= {:now}', { now })
+    const toActivate = $app.findRecordsByFilter(
+      "challenges",
+      'status = "pending" && startsAt <= {:now}',
+      "",
+      200,
+      0,
+      { now: now }
     );
 
     for (const challenge of toActivate) {
       challenge.set("status", "active");
       try {
         $app.save(challenge);
-        notifyParticipants($app, challenge.id, {
+        notifyParticipants(challenge.id, {
           title: "¡Tu reto comenzó!",
           body: `El reto "${challenge.get("title") || "sin título"}" ya está activo`,
           url: `/challenges/${challenge.id}`,
@@ -83,19 +90,24 @@ cronAdd("challenges-status-rollup", "*/5 * * * *", () => {
     console.error("[crons] Error querying pending challenges:", err);
   }
 
-  // active → completed
+  // active → completed (endsAt has passed)
   try {
-    const toComplete = $app.findAllRecords("challenges",
-      $app.newExpr('status = "active" && endsAt < {:now}', { now })
+    const toComplete = $app.findRecordsByFilter(
+      "challenges",
+      'status = "active" && endsAt < {:now}',
+      "",
+      200,
+      0,
+      { now: now }
     );
 
     for (const challenge of toComplete) {
       challenge.set("status", "completed");
       try {
         $app.save(challenge);
-        notifyParticipants($app, challenge.id, {
+        notifyParticipants(challenge.id, {
           title: "Reto finalizado",
-          body: `El reto "${challenge.get("title") || "sin título"}" (${challenge.get("type")}) ha concluido`,
+          body: `El reto "${challenge.get("title") || "sin título"}" ha concluido`,
           url: `/challenges/${challenge.id}`,
           tag: `challenge-completed-${challenge.id}`,
         });
