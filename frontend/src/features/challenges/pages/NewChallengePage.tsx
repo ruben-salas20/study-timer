@@ -1,40 +1,81 @@
-// NewChallengePage.tsx — Multi-step wizard to create a new challenge
-// Step 1: Select type
-// Step 2: Type-specific config (target, dates)
-// Step 3: Prizes
-// Step 4: Invite participants from accepted friends
-import { useState } from 'react'
+// NewChallengePage.tsx — Multi-step wizard to create a new challenge.
+// Step 1: Type · Step 2: Config (title, dates, goal) · Step 3: Prizes · Step 4: Friends
+//
+// UX rework:
+// - Top stepper with a 4-segment progress bar (no more "Paso N de 4" text)
+// - ChallengeTypeCard with per-type accent tint and selection check
+// - Date+time inputs replaced with DateTimePicker (date input + wheel pickers)
+// - Goal hours uses a WheelPicker for consistency with the timer config
+// - Friends step has search + visible selection counter
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Search, Trophy, Frown } from 'lucide-react'
 import { ChallengeTypeCard } from '../components/ChallengeTypeCard'
 import { useCreateChallenge } from '../hooks/useChallenges'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { DateTimePicker } from '@/shared/ui/DateTimePicker'
+import { WheelPicker } from '@/shared/ui/WheelPicker'
 import type { ChallengeType } from '../api/challenges'
 import { useFriendsList } from '@/features/friends/hooks/useFriends'
 
-// ── Wizard steps ──────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Step = 1 | 2 | 3 | 4
 
 const CHALLENGE_TYPES: ChallengeType[] = ['race', 'weekly_goal', 'duel', 'group_streak']
 
-// ── Form schema (step 2 fields) ───────────────────────────────────────────────
+const HOUR_VALUES = Array.from({ length: 100 }, (_, i) => i + 1) // 1..100h
+const STREAK_DAY_VALUES = Array.from({ length: 28 }, (_, i) => i + 3) // 3..30d
 
-const step2Schema = z.object({
-  title: z.string().min(3, 'Mínimo 3 caracteres').max(80, 'Máximo 80'),
-  description: z.string().max(500).optional(),
-  startsAt: z.string().min(1, 'Selecciona fecha de inicio'),
-  endsAt: z.string().min(1, 'Selecciona fecha de fin'),
-  targetSec: z.number().optional(),
-  targetDays: z.number().optional(),
-})
+interface Step2State {
+  title: string
+  description: string
+  startsAt: string // "YYYY-MM-DDTHH:mm" local
+  endsAt: string
+  targetHours: number
+  targetDays: number
+}
 
-type Step2Data = z.infer<typeof step2Schema>
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function pad(n: number): string {
+  return n.toString().padStart(2, '0')
+}
+
+function defaultDateTime(offsetDays: number, hour = 9, minute = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:${pad(minute)}`
+}
+
+function todayDate(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// ── Stepper ───────────────────────────────────────────────────────────────────
+
+function Stepper({ step, total }: { step: number; total: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: total }, (_, i) => {
+        const idx = i + 1
+        const active = idx <= step
+        return (
+          <div
+            key={idx}
+            className={[
+              'h-1.5 rounded-full transition-all flex-1',
+              active ? 'bg-(--color-primary)' : 'bg-white/10',
+            ].join(' ')}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export function NewChallengePage() {
   const navigate = useNavigate()
@@ -43,31 +84,66 @@ export function NewChallengePage() {
 
   const [step, setStep] = useState<Step>(1)
   const [selectedType, setSelectedType] = useState<ChallengeType>('race')
-  const [step2Data, setStep2Data] = useState<Step2Data | null>(null)
+
+  const [step2, setStep2] = useState<Step2State>({
+    title: '',
+    description: '',
+    startsAt: defaultDateTime(0, new Date().getHours(), Math.round(new Date().getMinutes() / 5) * 5),
+    endsAt: defaultDateTime(7, 23, 55),
+    targetHours: 10,
+    targetDays: 7,
+  })
+  const [step2Error, setStep2Error] = useState<string | null>(null)
+
   const [prizeWinner, setPrizeWinner] = useState('')
   const [prizeLoser, setPrizeLoser] = useState('')
+
+  const [friendQuery, setFriendQuery] = useState('')
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([])
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-  } = useForm<Step2Data>({
-    resolver: zodResolver(step2Schema),
-  })
+  // ── Derived ───────────────────────────────────────────────────────────────
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  const filteredFriends = useMemo(() => {
+    const q = friendQuery.trim().toLowerCase()
+    if (!q) return friends
+    return friends.filter((f) =>
+      f.user.displayName.toLowerCase().includes(q) ||
+      (f.user.friendCode ?? '').toLowerCase().includes(q)
+    )
+  }, [friends, friendQuery])
+
+  const showHoursTarget =
+    selectedType === 'race' || selectedType === 'weekly_goal' || selectedType === 'duel'
+  const showDaysTarget = selectedType === 'group_streak'
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   function goBack() {
     if (step > 1) setStep((s) => (s - 1) as Step)
     else navigate(-1)
   }
 
-  function onStep2Submit(data: Step2Data) {
-    setStep2Data(data)
+  function validateStep2(): string | null {
+    if (step2.title.trim().length < 3) return 'El título debe tener al menos 3 caracteres'
+    if (step2.title.length > 80) return 'El título es demasiado largo'
+    if (!step2.startsAt) return 'Selecciona la fecha de inicio'
+    if (!step2.endsAt) return 'Selecciona la fecha de fin'
+    const start = new Date(step2.startsAt)
+    const end = new Date(step2.endsAt)
+    if (end <= start) return 'La fecha de fin debe ser posterior al inicio'
+    return null
+  }
+
+  function nextFromStep2() {
+    const err = validateStep2()
+    if (err) {
+      setStep2Error(err)
+      return
+    }
+    setStep2Error(null)
     setStep(3)
   }
 
@@ -78,27 +154,24 @@ export function NewChallengePage() {
   }
 
   async function onFinalSubmit() {
-    if (!step2Data) return
     setSubmitting(true)
     setError(null)
-
     try {
       const challenge = await createMutation.mutateAsync({
         data: {
           type: selectedType,
-          title: step2Data.title,
-          description: step2Data.description,
-          startsAt: new Date(step2Data.startsAt),
-          endsAt: new Date(step2Data.endsAt),
-          targetSec: step2Data.targetSec,
-          targetDays: step2Data.targetDays,
+          title: step2.title.trim(),
+          description: step2.description.trim() || undefined,
+          startsAt: new Date(step2.startsAt),
+          endsAt: new Date(step2.endsAt),
+          targetSec: showHoursTarget ? step2.targetHours * 3600 : undefined,
+          targetDays: showDaysTarget ? step2.targetDays : undefined,
           prizeWinner,
           prizeLoser: prizeLoser || undefined,
           status: 'pending',
         },
         participantUserIds: selectedFriendIds,
       })
-
       navigate(`/challenges/${challenge.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear el reto')
@@ -107,35 +180,36 @@ export function NewChallengePage() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
-  const stepLabel = `Paso ${step} de 4`
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center gap-4 px-6 pt-10 pb-4">
-        <button
-          type="button"
-          onClick={goBack}
-          className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10"
-          aria-label="Volver"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <div>
+      <header className="flex flex-col gap-3 px-6 pt-10 pb-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={goBack}
+            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-white/10"
+            aria-label="Volver"
+          >
+            <ChevronLeft size={20} />
+          </button>
           <h1 className="text-xl font-bold">Crear reto</h1>
-          <p className="text-xs opacity-40">{stepLabel}</p>
         </div>
+        <Stepper step={step} total={4} />
       </header>
 
-      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pb-4 gap-6">
+      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pb-6 gap-5">
 
-        {/* ── Step 1: Select type ──────────────────────────────────────── */}
+        {/* ── Step 1: Type ───────────────────────────────────────────── */}
         {step === 1 && (
           <div className="flex flex-col gap-4">
-            <p className="text-sm opacity-60">¿Qué tipo de reto quieres crear?</p>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold">¿Qué tipo de reto?</h2>
+              <p className="text-sm opacity-60">Elige el formato que mejor te motive</p>
+            </div>
+            <div className="flex flex-col gap-3">
               {CHALLENGE_TYPES.map((type) => (
                 <ChallengeTypeCard
                   key={type}
@@ -148,175 +222,255 @@ export function NewChallengePage() {
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="w-full py-3 rounded-xl bg-(--color-primary) text-white font-medium"
+              className="w-full py-3.5 rounded-xl bg-(--color-primary) text-white font-semibold mt-2"
             >
               Continuar
             </button>
           </div>
         )}
 
-        {/* ── Step 2: Config ───────────────────────────────────────────── */}
+        {/* ── Step 2: Config ─────────────────────────────────────────── */}
         {step === 2 && (
-          <form onSubmit={handleSubmit(onStep2Submit)} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <label className="text-xs opacity-50">Título</label>
+              <h2 className="text-lg font-semibold">Detalles del reto</h2>
+              <p className="text-sm opacity-60">Nombra el reto y define cuándo y cuánto</p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-widest opacity-60">Título</label>
               <input
-                {...register('title')}
-                placeholder="Nombre del reto"
-                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+                value={step2.title}
+                onChange={(e) => setStep2((s) => ({ ...s, title: e.target.value }))}
+                placeholder="Ej. Maratón de matemáticas"
+                maxLength={80}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
               />
-              {errors.title && <p className="text-xs text-red-400">{errors.title.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs opacity-50">Descripción (opcional)</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs uppercase tracking-widest opacity-60">
+                Descripción <span className="opacity-50 normal-case">(opcional)</span>
+              </label>
               <textarea
-                {...register('description')}
-                placeholder="Describe el reto..."
+                value={step2.description}
+                onChange={(e) => setStep2((s) => ({ ...s, description: e.target.value }))}
+                placeholder="¿De qué se trata?"
                 rows={2}
-                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary) resize-none"
+                maxLength={500}
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary) resize-none"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1 min-w-0">
-                <label className="text-xs opacity-50">Empieza</label>
-                <input
-                  {...register('startsAt')}
-                  type="datetime-local"
-                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+            <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-widest opacity-60">Empieza</label>
+                <DateTimePicker
+                  value={step2.startsAt}
+                  onChange={(v) => setStep2((s) => ({ ...s, startsAt: v }))}
+                  minDate={todayDate()}
+                  ariaLabelDate="Fecha de inicio"
                 />
-                {errors.startsAt && <p className="text-xs text-red-400">{errors.startsAt.message}</p>}
               </div>
-              <div className="flex flex-col gap-1 min-w-0">
-                <label className="text-xs opacity-50">Termina</label>
-                <input
-                  {...register('endsAt')}
-                  type="datetime-local"
-                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+              <div className="h-px bg-white/10 my-1" />
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-widest opacity-60">Termina</label>
+                <DateTimePicker
+                  value={step2.endsAt}
+                  onChange={(v) => setStep2((s) => ({ ...s, endsAt: v }))}
+                  minDate={todayDate()}
+                  ariaLabelDate="Fecha de fin"
                 />
-                {errors.endsAt && <p className="text-xs text-red-400">{errors.endsAt.message}</p>}
               </div>
             </div>
 
-            {/* Type-specific fields */}
-            {(selectedType === 'race' || selectedType === 'weekly_goal' || selectedType === 'duel') && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs opacity-50">Objetivo (horas)</label>
-                <Controller
-                  name="targetSec"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="e.g. 10"
-                      value={field.value ? field.value / 3600 : ''}
-                      onChange={(e) => field.onChange(Number(e.target.value) * 3600)}
-                      className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+            {showHoursTarget && (
+              <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <label className="text-xs uppercase tracking-widest opacity-60 text-center">
+                  Objetivo
+                </label>
+                <div className="flex justify-center">
+                  <div className="w-24">
+                    <WheelPicker
+                      values={HOUR_VALUES}
+                      value={step2.targetHours}
+                      onChange={(h) => setStep2((s) => ({ ...s, targetHours: h }))}
+                      suffix="h"
+                      ariaLabel="Horas objetivo"
                     />
-                  )}
-                />
+                  </div>
+                </div>
               </div>
             )}
 
-            {selectedType === 'group_streak' && (
-              <div className="flex flex-col gap-1">
-                <label className="text-xs opacity-50">Días de racha (3–30)</label>
-                <Controller
-                  name="targetDays"
-                  control={control}
-                  render={({ field }) => (
-                    <input
-                      type="number"
-                      min={3}
-                      max={30}
-                      placeholder="e.g. 7"
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+            {showDaysTarget && (
+              <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <label className="text-xs uppercase tracking-widest opacity-60 text-center">
+                  Días de racha
+                </label>
+                <div className="flex justify-center">
+                  <div className="w-24">
+                    <WheelPicker
+                      values={STREAK_DAY_VALUES}
+                      value={step2.targetDays}
+                      onChange={(d) => setStep2((s) => ({ ...s, targetDays: d }))}
+                      suffix="d"
+                      ariaLabel="Días de racha"
                     />
-                  )}
-                />
+                  </div>
+                </div>
               </div>
+            )}
+
+            {step2Error && (
+              <p className="text-sm text-red-400 text-center">{step2Error}</p>
             )}
 
             <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-(--color-primary) text-white font-medium mt-2"
+              type="button"
+              onClick={nextFromStep2}
+              className="w-full py-3.5 rounded-xl bg-(--color-primary) text-white font-semibold"
             >
               Continuar
             </button>
-          </form>
+          </div>
         )}
 
-        {/* ── Step 3: Prizes ───────────────────────────────────────────── */}
+        {/* ── Step 3: Prizes ─────────────────────────────────────────── */}
         {step === 3 && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm opacity-60">¿Qué está en juego?</p>
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
-              <label className="text-xs opacity-50">Premio ganador *</label>
+              <h2 className="text-lg font-semibold">¿Qué está en juego?</h2>
+              <p className="text-sm opacity-60">Lo que motiva a no aflojar</p>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2">
+                <Trophy size={16} className="text-(--color-primary)" />
+                <label className="text-xs uppercase tracking-widest opacity-70">
+                  Premio del ganador
+                </label>
+              </div>
               <input
                 value={prizeWinner}
                 onChange={(e) => setPrizeWinner(e.target.value)}
-                placeholder="El ganador..."
+                placeholder="Cena, película, lo que sea..."
                 maxLength={200}
-                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs opacity-50">Penitencia perdedor (opcional)</label>
+
+            <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2">
+                <Frown size={16} className="opacity-70" />
+                <label className="text-xs uppercase tracking-widest opacity-70">
+                  Penitencia del perdedor <span className="normal-case opacity-60">(opcional)</span>
+                </label>
+              </div>
               <input
                 value={prizeLoser}
                 onChange={(e) => setPrizeLoser(e.target.value)}
-                placeholder="El perdedor..."
+                placeholder="Lavar los platos durante una semana..."
                 maxLength={200}
-                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
               />
             </div>
+
             <button
               type="button"
               disabled={!prizeWinner.trim()}
               onClick={() => setStep(4)}
-              className="w-full py-3 rounded-xl bg-(--color-primary) text-white font-medium disabled:opacity-40"
+              className="w-full py-3.5 rounded-xl bg-(--color-primary) text-white font-semibold disabled:opacity-40"
             >
               Continuar
             </button>
           </div>
         )}
 
-        {/* ── Step 4: Invite participants ───────────────────────────────── */}
+        {/* ── Step 4: Friends ────────────────────────────────────────── */}
         {step === 4 && (
           <div className="flex flex-col gap-4">
-            <p className="text-sm opacity-60">
-              Invita amigos al reto ({selectedFriendIds.length} seleccionados)
-            </p>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold">Invita a tus amigos</h2>
+              <p className="text-sm opacity-60">
+                {selectedFriendIds.length === 0
+                  ? 'Selecciona los amigos que quieres invitar'
+                  : `${selectedFriendIds.length} ${selectedFriendIds.length === 1 ? 'amigo seleccionado' : 'amigos seleccionados'}`}
+              </p>
+            </div>
+
+            {friends.length > 4 && (
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+                <input
+                  value={friendQuery}
+                  onChange={(e) => setFriendQuery(e.target.value)}
+                  placeholder="Buscar amigos..."
+                  className="w-full rounded-lg bg-white/5 border border-white/10 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
+                />
+              </div>
+            )}
 
             {friends.length === 0 ? (
-              <p className="text-sm opacity-40 text-center py-4">No tienes amigos aún</p>
+              <div className="flex flex-col items-center gap-2 py-8 opacity-50">
+                <p className="text-sm">No tienes amigos agregados aún</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/friends/add')}
+                  className="text-xs text-(--color-primary) underline"
+                >
+                  Agregar amigos
+                </button>
+              </div>
+            ) : filteredFriends.length === 0 ? (
+              <p className="text-sm opacity-40 text-center py-4">Sin resultados</p>
             ) : (
               <div className="flex flex-col gap-2">
-                {friends.map((entry) => (
-                  <button
-                    key={entry.friendshipId}
-                    type="button"
-                    onClick={() => toggleFriend(entry.user.id)}
-                    className={[
-                      'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
-                      selectedFriendIds.includes(entry.user.id)
-                        ? 'border-(--color-primary) bg-(--color-primary)/10'
-                        : 'border-white/10 bg-white/5',
-                    ].join(' ')}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-xs font-bold">
-                      {entry.user.displayName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm flex-1">{entry.user.displayName}</span>
-                    {selectedFriendIds.includes(entry.user.id) && (
-                      <span className="text-xs text-(--color-primary)">✓</span>
-                    )}
-                  </button>
-                ))}
+                {filteredFriends.map((entry) => {
+                  const isSelected = selectedFriendIds.includes(entry.user.id)
+                  return (
+                    <button
+                      key={entry.friendshipId}
+                      type="button"
+                      onClick={() => toggleFriend(entry.user.id)}
+                      className={[
+                        'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all',
+                        isSelected
+                          ? 'border-(--color-primary) bg-(--color-primary)/10'
+                          : 'border-white/10 bg-white/[0.03] hover:bg-white/5',
+                      ].join(' ')}
+                      aria-pressed={isSelected}
+                    >
+                      <div className="w-9 h-9 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-sm font-bold shrink-0">
+                        {entry.user.displayName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate">
+                          {entry.user.displayName}
+                        </span>
+                        {entry.user.friendCode && (
+                          <span className="text-[11px] opacity-40 tabular-nums">
+                            #{entry.user.friendCode}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={[
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
+                          isSelected
+                            ? 'bg-(--color-primary) border-(--color-primary)'
+                            : 'border-white/20',
+                        ].join(' ')}
+                      >
+                        {isSelected && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             )}
 
@@ -326,9 +480,9 @@ export function NewChallengePage() {
               type="button"
               onClick={onFinalSubmit}
               disabled={submitting}
-              className="w-full py-3 rounded-xl bg-(--color-primary) text-white font-medium disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl bg-(--color-primary) text-white font-semibold disabled:opacity-60 mt-2"
             >
-              {submitting ? 'Creando reto...' : 'Crear reto'}
+              {submitting ? 'Creando reto…' : 'Crear reto'}
             </button>
           </div>
         )}
