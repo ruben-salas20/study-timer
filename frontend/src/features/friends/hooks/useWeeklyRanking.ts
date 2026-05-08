@@ -133,11 +133,16 @@ export function useWeeklyRanking() {
       cutoff.setDate(cutoff.getDate() - 30)
       const cutoffStr = cutoff.toISOString().replace('T', ' ').substring(0, 19)
 
+      // Per-user requestKey prevents PB SDK from auto-cancelling parallel
+      // requests to the same endpoint. Without this, when allUsers transitions
+      // from [me] to [me, friend], the second fetch for "me" cancels the
+      // first one — my row drops to 0 sessions.
       const sessionResults = await Promise.all(
         allUsers.map(async (u) => {
           try {
             return await pb.collection('study_sessions').getList(1, 500, {
               filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${cutoffStr}"`,
+              requestKey: `weeklyRanking-sessions-${u.id}`,
             })
           } catch (err) {
             console.error(`[useWeeklyRanking] Failed to fetch sessions for user ${u.id}:`, err)
