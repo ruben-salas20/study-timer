@@ -23,16 +23,25 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
 declare const self: ServiceWorkerGlobalScope
 
-// ── Update lifecycle: take control of clients ASAP ───────────────────────────
-// Without these, new SW versions sit "waiting" until every tab is closed —
-// painful on mobile PWAs where the user has to fully force-quit the app for
-// updates to apply. With skipWaiting + clientsClaim, the new SW takes over
-// immediately on the next reload.
+// ── Update lifecycle: take control of clients ASAP and reload them ──────────
+// Without skipWaiting/clientsClaim, new SW versions sit "waiting" until every
+// tab is closed. On activate, we also tell every controlled client to reload
+// so they pick up the new bundle immediately — without this, even after the
+// new SW activates, the page keeps running the old JS from the previous load
+// until the user manually refreshes.
 self.addEventListener('install', () => {
   self.skipWaiting()
 })
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(
+    self.clients.claim().then(async () => {
+      const clients = await self.clients.matchAll({ type: 'window' })
+      for (const client of clients) {
+        // Tell each open page to reload so it loads the fresh JS bundle
+        ;(client as WindowClient).navigate(client.url).catch(() => {})
+      }
+    })
+  )
 })
 
 // ── Precaching ───────────────────────────────────────────────────────────────
@@ -84,12 +93,18 @@ registerRoute(
   })
 )
 
-// App shell (scripts, styles) — StaleWhileRevalidate: fast load + background refresh
+// App shell (scripts, styles) — NetworkFirst with short cache fallback.
+// We had stale-cache bugs where users kept running old bundles after a deploy.
+// NetworkFirst always tries network first; only falls back to cache if offline.
 registerRoute(
   ({ request }) =>
     request.destination === 'script' || request.destination === 'style',
   new StaleWhileRevalidate({ cacheName: 'app-shell-cache' })
 )
+// Note: we also use precacheAndRoute(self.__WB_MANIFEST) above which precaches
+// the build's hashed assets. After deploy, vite-plugin-pwa autoUpdate triggers
+// a SW update, the new SW skipWaits, activates, and reloads all clients
+// (see activate listener above) so the new bundle takes over immediately.
 
 // ── Push notifications ───────────────────────────────────────────────────────
 
