@@ -38,8 +38,6 @@ export function useMyChallenges() {
     queryKey: CHALLENGE_KEYS.list,
     queryFn: listMyChallenges,
     staleTime: 30 * 1000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
     enabled: !!myId && pb.authStore.isValid,
   })
 

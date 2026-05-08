@@ -3,9 +3,9 @@
 // summed by user and sorted by totalSec desc.
 // Pure functions are exported separately for unit testing (TDD).
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import pb from '@/shared/pb'
-import { listFriends } from '../api/friends'
+import { useFriendsList } from './useFriends'
 import type { FriendUserInfo } from '../api/friends'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -96,37 +96,37 @@ export function aggregateWeeklyRanking(
 export function useWeeklyRanking() {
   const myId = pb.authStore.model?.id as string | undefined
 
+  // Reuse the friends-list query (shared cache via TanStack Query). This
+  // avoids the duplicate `listFriends()` call we had before, which caused
+  // the FriendsPage to fire 4 parallel friendship requests on every mount.
+  const { data: friendEntries = [] } = useFriendsList()
+
+  // Stable user list (me + friends) — only changes when friendEntries do
+  const allUsers: FriendUserInfo[] = useMemo(() => {
+    if (!myId) return []
+    const me: FriendUserInfo = {
+      id: myId,
+      displayName: (pb.authStore.model?.displayName as string) ?? 'Yo',
+      friendCode: (pb.authStore.model?.friendCode as string) ?? '',
+      avatarUrl: pb.authStore.model?.avatarUrl as string | undefined,
+    }
+    return [me, ...friendEntries.map((f) => f.user)]
+  }, [myId, friendEntries])
+
+  const allUserIdsKey = allUsers.map((u) => u.id).sort().join(',')
+
   const { data: ranking = [], refetch } = useQuery({
-    queryKey: ['friends', 'weeklyRanking'],
+    queryKey: ['friends', 'weeklyRanking', allUserIdsKey],
     queryFn: async (): Promise<RankingEntry[]> => {
-      if (!myId) return []
+      if (!myId || allUsers.length === 0) return []
 
-      // 1. Get accepted friends
-      const friends = await listFriends()
-
-      // Current user's info
-      const me: FriendUserInfo = {
-        id: myId,
-        displayName: (pb.authStore.model?.displayName as string) ?? 'Yo',
-        friendCode: (pb.authStore.model?.friendCode as string) ?? '',
-        avatarUrl: pb.authStore.model?.avatarUrl as string | undefined,
-      }
-
-      const allUsers: FriendUserInfo[] = [me, ...friends.map((f) => f.user)]
-      const allUserIds = allUsers.map((u) => u.id)
-
-      // 2. Compute ISO week start (UTC)
       const weekStart = getISOWeekStart(new Date())
-      // Format as PocketBase datetime filter: "2025-01-06 00:00:00"
       const weekStartStr = weekStart.toISOString().replace('T', ' ').substring(0, 19)
 
-      // 3. Fetch sessions for all users in the current week
-      // We use one query per user to stay within PB rule constraints
-      // (friends visibility rule on study_sessions allows accepted friend reads)
       const sessionResults = await Promise.all(
-        allUserIds.map((uid) =>
+        allUsers.map((u) =>
           pb.collection('study_sessions').getList(1, 500, {
-            filter: `user = "${uid}" && endedAt != "" && startedAt >= "${weekStartStr}"`,
+            filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${weekStartStr}"`,
           })
         )
       )
@@ -143,31 +143,21 @@ export function useWeeklyRanking() {
 
       return aggregateWeeklyRanking(allSessions, allUsers, myId)
     },
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 60 * 1000,
     enabled: !!myId && pb.authStore.isValid,
   })
 
-  // Realtime subscription: re-fetch when any friendship changes
+  // Realtime: refetch when sessions change. Friendships changes invalidate
+  // useFriendsList's query, which in turn re-runs this hook via allUsers
+  // memo dependency — no need for a separate friendship subscription here.
   useEffect(() => {
     if (!myId) return
-
-    let unsubFriendships: (() => void) | undefined
-    let unsubSessions: (() => void) | undefined
-
-    void pb
-      .collection('friendships')
-      .subscribe('*', () => void refetch())
-      .then((unsub) => { unsubFriendships = unsub })
-
+    let unsub: (() => void) | undefined
     void pb
       .collection('study_sessions')
       .subscribe('*', () => void refetch())
-      .then((unsub) => { unsubSessions = unsub })
-
-    return () => {
-      unsubFriendships?.()
-      unsubSessions?.()
-    }
+      .then((fn) => { unsub = fn })
+    return () => { unsub?.() }
   }, [myId, refetch])
 
   return { ranking }
