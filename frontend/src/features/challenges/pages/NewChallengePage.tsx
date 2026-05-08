@@ -178,22 +178,22 @@ export function NewChallengePage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1 min-w-0">
                 <label className="text-xs opacity-50">Empieza</label>
                 <input
                   {...register('startsAt')}
                   type="datetime-local"
-                  className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
                 />
                 {errors.startsAt && <p className="text-xs text-red-400">{errors.startsAt.message}</p>}
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 min-w-0">
                 <label className="text-xs opacity-50">Termina</label>
                 <input
                   {...register('endsAt')}
                   type="datetime-local"
-                  className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
+                  className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm outline-none focus:border-(--color-primary)"
                 />
                 {errors.endsAt && <p className="text-xs text-red-400">{errors.endsAt.message}</p>}
               </div>

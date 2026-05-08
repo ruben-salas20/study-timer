@@ -70,12 +70,26 @@ export function ChallengeDetailPage() {
   const navigate = useNavigate()
   const myId = pb.authStore.model?.id as string
 
+  // ── ALL hooks must be called unconditionally on every render (Rules of Hooks)
+  // Previous bug: useChallengeParticipantSessions was called AFTER an early
+  // return for isLoading. When isLoading flipped false on the next render,
+  // the hook count changed and React threw — ErrorBoundary caught it.
+  // Fix: call every hook at the top, derive UI state below, only branch in JSX.
   const { data: challenge, isLoading, error } = useChallenge(id ?? '')
   const leaveMutation = useLeaveChallenge()
   const cancelMutation = useCancelChallenge()
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
+  // For group_streak: fetch sessions for all participants and compute streak
+  // Always call this hook (with empty array if challenge not loaded or wrong type).
+  const participantUserIds =
+    challenge?.type === 'group_streak'
+      ? challenge.participants.map((p) => p.user)
+      : []
+  const { sessionsByUser } = useChallengeParticipantSessions(participantUserIds)
+
+  // ── Early returns (after all hooks) ─────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-background text-foreground items-center justify-center">
@@ -95,6 +109,7 @@ export function ChallengeDetailPage() {
     )
   }
 
+  // ── Derived state (challenge is guaranteed defined here) ────────────────────
   const participants = challenge.participants.map(toAggParticipant)
   const aggChallenge = toAggChallenge(challenge)
   const isCreator = challenge.createdBy === myId
@@ -102,7 +117,6 @@ export function ChallengeDetailPage() {
   const canCancel = isCreator && challenge.status === 'pending'
   const canLeave = !!myParticipant && !isCreator
 
-  // Resolve user names from the expanded participant records (set in mapChallenge)
   const userNamesById = new Map<string, string>(
     challenge.participants.map((p) => [p.user, p.userDisplayName])
   )
@@ -110,13 +124,6 @@ export function ChallengeDetailPage() {
     if (userId === myId) return 'Tú'
     return userNamesById.get(userId) || `Usuario ${userId.slice(0, 6)}`
   }
-
-  // For group_streak: fetch sessions for all participants and compute streak
-  const participantUserIds =
-    challenge.type === 'group_streak'
-      ? challenge.participants.map((p) => p.user)
-      : []
-  const { sessionsByUser } = useChallengeParticipantSessions(participantUserIds)
 
   async function handleLeave() {
     if (!myParticipant) return
