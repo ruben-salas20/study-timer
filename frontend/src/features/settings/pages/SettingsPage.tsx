@@ -218,24 +218,6 @@ export function SettingsPage() {
           )}
         </section>
 
-        {/* ── Modo Focus ────────────────────────────────────────────────── */}
-        <section>
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
-            Modo Focus
-          </p>
-          <div className="flex items-center justify-between rounded-xl border border-current/20 px-4 py-3">
-            <div>
-              <p className="text-sm font-medium">Activar Modo Focus</p>
-              <p className="text-xs opacity-50 mt-0.5">
-                Nota: la PWA no puede bloquear otras apps del dispositivo.
-              </p>
-            </div>
-            <div className="w-10 h-6 rounded-full bg-current/20 relative cursor-not-allowed opacity-40">
-              <div className="absolute left-1 top-1 w-4 h-4 rounded-full bg-background" />
-            </div>
-          </div>
-        </section>
-
         {/* ── Notificaciones ───────────────────────────────────────────── */}
         <section>
           <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">

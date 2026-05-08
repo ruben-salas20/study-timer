@@ -11,6 +11,45 @@ import type { ReactNode } from 'react'
 import pb from '@/shared/pb'
 import { InstallPrompt } from '@/features/pwa/components/InstallPrompt'
 
+/**
+ * AuthRefreshEffect — extends the PocketBase auth token on app boot and
+ * whenever the app comes back from background. Without this, users had to
+ * re-login every time they fully closed the PWA — even though the token
+ * was still in localStorage, it could be near expiration.
+ *
+ * pb.collection('users').authRefresh() requests a fresh token from the
+ * server and updates pb.authStore in place. If the refresh fails (network,
+ * token revoked) the catch is silent — pb.authStore.isValid will become
+ * false and the next protected route will redirect to /welcome.
+ */
+function AuthRefreshEffect() {
+  useEffect(() => {
+    async function refresh() {
+      if (!pb.authStore.isValid) return
+      try {
+        await pb.collection('users').authRefresh()
+      } catch {
+        // Token rejected by server — clear so the user gets a clean re-login flow
+        pb.authStore.clear()
+      }
+    }
+
+    void refresh()
+
+    // Re-validate when the user comes back to the app after backgrounding
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  return null
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -89,6 +128,7 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ThemeEffect />
+        <AuthRefreshEffect />
         {/* InstallPrompt renders a fixed banner when the app is installable */}
         <InstallPrompt />
         {children}
