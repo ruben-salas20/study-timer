@@ -117,9 +117,14 @@ export function useWeeklyRanking() {
 
   const queryClient = useQueryClient()
 
-  const { data: ranking = [] } = useQuery({
-    queryKey: ['friends', 'weeklyRanking', allUserIdsKey],
-    queryFn: async (): Promise<RankingEntry[]> => {
+  // Query JUST for sessions (not the computed ranking). This decouples the
+  // user list from session data so we can ALWAYS render the ranking — even
+  // if sessions are still loading or fail to fetch, users still appear with
+  // 0 minutes. Previously the queryFn computed the ranking inline; if any
+  // step threw, ranking stayed empty and the page got stuck on a skeleton.
+  const { data: weekSessions = [] } = useQuery({
+    queryKey: ['friends', 'weeklyRanking-sessions', allUserIdsKey],
+    queryFn: async (): Promise<SessionRecord[]> => {
       if (!myId || allUsers.length === 0) return []
 
       const weekStart = getISOWeekStart(new Date())
@@ -127,39 +132,44 @@ export function useWeeklyRanking() {
 
       const sessionResults = await Promise.all(
         allUsers.map((u) =>
-          pb.collection('study_sessions').getList(1, 500, {
-            filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${weekStartStr}"`,
-          })
+          pb
+            .collection('study_sessions')
+            .getList(1, 500, {
+              filter: `user = "${u.id}" && endedAt != "" && startedAt >= "${weekStartStr}"`,
+            })
+            .catch(() => ({ items: [] as Array<Record<string, unknown>> }))
         )
       )
 
-      const allSessions: SessionRecord[] = sessionResults.flatMap((res) =>
-        res.items.map((item) => ({
-          id: item.id,
-          user: (item as Record<string, unknown>).user as string,
-          durationSec: ((item as Record<string, unknown>).durationSec as number) ?? 0,
-          startedAt: (item as Record<string, unknown>).startedAt as string,
-          endedAt: (item as Record<string, unknown>).endedAt as string,
+      return sessionResults.flatMap((res) =>
+        (res.items as Array<Record<string, unknown>>).map((item) => ({
+          id: item.id as string,
+          user: item.user as string,
+          durationSec: (item.durationSec as number) ?? 0,
+          startedAt: item.startedAt as string,
+          endedAt: item.endedAt as string,
         }))
       )
-
-      return aggregateWeeklyRanking(allSessions, allUsers, myId)
     },
     staleTime: 60 * 1000,
-    enabled: !!myId && pb.authStore.isValid,
+    enabled: !!myId && allUsers.length > 0 && pb.authStore.isValid,
   })
 
-  // Realtime: invalidate when sessions change. We use queryClient (stable
-  // reference) instead of refetch (regenerated each render — caused the
-  // subscription to be torn down + re-created on every render, which
-  // flickered the query and sometimes left ranking stuck at 0).
+  // ranking is computed synchronously from allUsers + sessions cache.
+  // Even before sessions load, allUsers are returned with 0 totalSec each.
+  const ranking: RankingEntry[] = useMemo(() => {
+    if (!myId || allUsers.length === 0) return []
+    return aggregateWeeklyRanking(weekSessions, allUsers, myId)
+  }, [myId, allUsers, weekSessions])
+
+  // Realtime: invalidate sessions cache when any session changes
   useEffect(() => {
     if (!myId) return
     let unsub: (() => void) | undefined
     void pb
       .collection('study_sessions')
       .subscribe('*', () => {
-        void queryClient.invalidateQueries({ queryKey: ['friends', 'weeklyRanking'] })
+        void queryClient.invalidateQueries({ queryKey: ['friends', 'weeklyRanking-sessions'] })
       })
       .then((fn) => { unsub = fn })
     return () => { unsub?.() }
