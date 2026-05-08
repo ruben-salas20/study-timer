@@ -1,11 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Background — warm paper tone matching hi-fi --bg light or stays dark for contrast -->
   <rect width="512" height="512" rx="112" fill="#1a1f1a"/>
 
-  <!-- Outer clock face circle -->
   <circle cx="256" cy="256" r="174" fill="none" stroke="#84a98c" stroke-width="14" opacity="0.6"/>
 
-  <!-- 12 hour tick marks -->
   <g stroke="#84a98c" stroke-width="6" stroke-linecap="round">
     <line x1="256" y1="78"  x2="256" y2="100"/>
     <line x1="256" y1="412" x2="256" y2="434"/>
@@ -23,13 +20,9 @@
     <line x1="412" y1="345" x2="393" y2="338"/>
   </g>
 
-  <!-- Hour hand (pointing slightly past 12 — focused minute zone) -->
   <line x1="256" y1="256" x2="256" y2="156" stroke="#a8c5b0" stroke-width="14" stroke-linecap="round"/>
-
-  <!-- Minute hand (pointing to 2 o'clock — represents progress / "studying") -->
   <line x1="256" y1="256" x2="332" y2="206" stroke="#84a98c" stroke-width="10" stroke-linecap="round"/>
 
-  <!-- Center pin -->
   <circle cx="256" cy="256" r="14" fill="#cad7c9"/>
   <circle cx="256" cy="256" r="6" fill="#1a1f1a"/>
 </svg>
