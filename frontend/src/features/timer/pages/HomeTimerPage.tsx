@@ -18,7 +18,7 @@ import type { PomodoroConfig, CountdownConfig } from '../schemas'
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
 
 export function HomeTimerPage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { start } = useTimer()
   // Same source of truth as the Stats page — derives today/week from a single
@@ -52,11 +52,6 @@ export function HomeTimerPage() {
     navigate('/timer/active')
   }
 
-  async function handleLogout() {
-    await logout()
-    navigate('/welcome')
-  }
-
   const greeting = user?.displayName
     ? `Hola, ${String(user.displayName).split(' ')[0]}`
     : 'Bienvenido'
@@ -77,10 +72,10 @@ export function HomeTimerPage() {
         </div>
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => navigate('/me')}
           className="flex items-center justify-center w-10 h-10 rounded-full bg-(--color-primary) text-white font-semibold text-lg"
-          aria-label="Avatar / cerrar sesión"
-          title="Cerrar sesión"
+          aria-label="Ir a mi perfil"
+          title="Mi perfil"
         >
           {user?.displayName ? String(user.displayName)[0].toUpperCase() : '?'}
         </button>
