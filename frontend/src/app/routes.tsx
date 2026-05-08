@@ -7,6 +7,8 @@
 // F8: page-enter animation keyed on location for subtle 100ms fade transition.
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
+import { RedirectIfAuthenticated } from '@/features/auth/components/RedirectIfAuthenticated'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { WelcomePage } from '@/features/auth/pages/WelcomePage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
@@ -22,6 +24,27 @@ import { MePage } from '@/features/me/pages/MePage'
 import { StatsPage } from '@/features/stats/pages/StatsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+
+/**
+ * RootRedirect — decides where "/" sends the user based on auth state.
+ * Without this, "/" always redirected to /welcome and PWA start_url
+ * users with a valid token in localStorage were re-prompted to login.
+ */
+function RootRedirect() {
+  const { isAuthenticated, isLoading } = useAuth()
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div
+          className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"
+          aria-label="Cargando..."
+          role="status"
+        />
+      </div>
+    )
+  }
+  return <Navigate to={isAuthenticated ? '/home' : '/welcome'} replace />
+}
 
 /** 404 fallback */
 function NotFound() {
@@ -43,13 +66,34 @@ export function AppRoutes() {
   return (
     <div key={location.pathname} className="page-enter">
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<Navigate to="/welcome" replace />} />
+      {/* Root redirect — auth-aware so PWA start_url respects existing session */}
+      <Route path="/" element={<RootRedirect />} />
 
-      {/* Public routes */}
-      <Route path="/welcome" element={<WelcomePage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      {/* Public routes — bounce already-authenticated users straight to /home */}
+      <Route
+        path="/welcome"
+        element={
+          <RedirectIfAuthenticated>
+            <WelcomePage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <RedirectIfAuthenticated>
+            <RegisterPage />
+          </RedirectIfAuthenticated>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <RedirectIfAuthenticated>
+            <LoginPage />
+          </RedirectIfAuthenticated>
+        }
+      />
 
       {/* Protected routes */}
       <Route

@@ -24,6 +24,16 @@ import { InstallPrompt } from '@/features/pwa/components/InstallPrompt'
  */
 function AuthRefreshEffect() {
   useEffect(() => {
+    // Ask the browser to mark our storage as persistent so Android/Chrome
+    // will not evict the localStorage entries (including pocketbase_auth)
+    // under storage pressure or after long inactivity. For installed PWAs
+    // this is granted without a user prompt.
+    if (navigator.storage?.persist) {
+      void navigator.storage.persisted().then((already) => {
+        if (!already) void navigator.storage.persist()
+      })
+    }
+
     async function refresh() {
       if (!pb.authStore.isValid) return
       try {
