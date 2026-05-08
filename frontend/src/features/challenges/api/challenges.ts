@@ -173,9 +173,11 @@ export async function cancelChallenge(challengeId: string): Promise<void> {
  * Results include participants expanded with user info.
  */
 export async function listMyChallenges(): Promise<ChallengeRecord[]> {
+  // Note: PB 0.23 collections do not auto-add `created`/`updated` autodate
+  // fields. Sort by startsAt (newest first) which always exists.
   const result = await pb.collection('challenges').getList(1, 200, {
     expand: EXPAND,
-    sort: '-created',
+    sort: '-startsAt',
   })
 
   return (result.items as unknown as Record<string, unknown>[]).map(mapChallenge)

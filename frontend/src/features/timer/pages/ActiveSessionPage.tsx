@@ -22,25 +22,33 @@ function ConfirmStopModal({
       aria-modal="true"
       aria-labelledby="confirm-stop-title"
     >
-      <div className="w-full max-w-sm rounded-2xl bg-background p-6 flex flex-col gap-5 shadow-xl">
+      <div
+        className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-5 shadow-xl"
+        style={{
+          background: 'var(--color-background, #ffffff)',
+          color: 'var(--color-foreground, #0a0a0a)',
+        }}
+      >
         <h2 id="confirm-stop-title" className="text-lg font-semibold text-center">
           ¿Terminar sesión?
         </h2>
-        <p className="text-sm opacity-60 text-center">
+        <p className="text-sm opacity-70 text-center">
           Se guardará el progreso hasta este momento.
         </p>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border border-current/30 font-medium opacity-70"
+            className="flex-1 py-3 rounded-xl border font-medium"
+            style={{ borderColor: 'rgba(127,127,127,0.3)' }}
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold"
+            className="flex-1 py-3 rounded-xl text-white font-semibold"
+            style={{ background: '#dc2626' }}
           >
             Terminar
           </button>

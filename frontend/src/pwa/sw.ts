@@ -16,16 +16,10 @@
 //   - Displays notifications using the Notifications API
 //   - notificationclick: focuses existing client or opens a new window
 
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
-import {
-  NetworkFirst,
-  StaleWhileRevalidate,
-  CacheFirst,
-  NetworkOnly,
-} from 'workbox-strategies'
+import { StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { createHandlerBoundToURL } from 'workbox-precaching'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -61,19 +55,13 @@ registerRoute(navigationRoute)
 
 // ── Runtime caching ──────────────────────────────────────────────────────────
 
-// PocketBase API — NetworkFirst: always try the network, fall back to cache
+// PocketBase API — NetworkOnly: never cache user/session/friend/challenge data.
+// Caching API responses caused stale UI bugs (e.g. weekly stats stuck at 0
+// after sessions completed). The network is fast enough that no cache is
+// needed here. Offline mode for API calls is out of scope for now.
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/collections/'),
-  new NetworkFirst({
-    cacheName: 'pb-api-cache',
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 5 * 60, // 5 minutes
-      }),
-    ],
-  })
+  new NetworkOnly()
 )
 
 // PocketBase realtime — NetworkOnly: SSE connections must never be cached
