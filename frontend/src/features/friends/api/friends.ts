@@ -119,6 +119,7 @@ export async function listFriends(): Promise<FriendshipEntry[]> {
   const result = await pb.collection('friendships').getList(1, 200, {
     filter: `status = "accepted" && (userA = "${myId}" || userB = "${myId}")`,
     expand: 'userA,userB',
+    sort: '-created',
   })
 
   return result.items.map((record) => {
@@ -140,6 +141,7 @@ export async function listIncomingRequests(): Promise<FriendshipEntry[]> {
   const result = await pb.collection('friendships').getList(1, 200, {
     filter: `status = "pending" && requestedBy != "${myId}" && (userA = "${myId}" || userB = "${myId}")`,
     expand: 'userA,userB',
+    sort: '-created',
   })
 
   return result.items.map((record) => {
@@ -161,6 +163,7 @@ export async function listOutgoingRequests(): Promise<FriendshipEntry[]> {
   const result = await pb.collection('friendships').getList(1, 200, {
     filter: `status = "pending" && requestedBy = "${myId}"`,
     expand: 'userA,userB',
+    sort: '-created',
   })
 
   return result.items.map((record) => {
