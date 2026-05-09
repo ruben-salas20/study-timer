@@ -1,12 +1,14 @@
 // MePage.tsx — "Yo" hub screen at /me (and the BottomNav "Yo" tab entry)
 // Shows avatar, displayName, friendCode, then nav cards for Stats/Profile/Settings.
-// F6: adds EnableNotificationsCTA + install app hint.
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart2, User, Settings, Download, BookOpen } from 'lucide-react'
+import { BarChart2, User, Settings, BookOpen, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
 import { Avatar } from '@/features/avatar/components/Avatar'
+
+const APP_VERSION = __APP_VERSION__
+const REPORT_EMAIL = 'rubensalas0907@gmail.com'
 
 interface NavCard {
   to: string
@@ -48,6 +50,11 @@ export function MePage() {
 
   const displayName = (user?.displayName as string | undefined) ?? ''
   const friendCode = (user?.friendCode as string | undefined) ?? '------'
+  const email = (user?.email as string | undefined) ?? ''
+
+  const reportHref = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(
+    `Study Timer v${APP_VERSION} - Reporte`
+  )}&body=${encodeURIComponent(`\n\n---\nUsuario: ${email}\nVersión: ${APP_VERSION}`)}`
 
   async function handleLogout() {
     await logout()
@@ -97,28 +104,37 @@ export function MePage() {
         {/* ── Notificaciones CTA (F6) ─────────────────────────────── */}
         <EnableNotificationsCTA />
 
-        {/* ── Instalar app (F6) ───────────────────────────────────── */}
-        <Link
-          to="/settings"
-          className="flex items-center gap-3 rounded-xl border border-current/15 px-4 py-3 hover:border-(--color-primary)/40 transition-colors"
-          aria-label="Instalar aplicación"
+        {/* ── Reportar errores ─────────────────────────────────────── */}
+        <a
+          href={reportHref}
+          className="flex items-center gap-4 rounded-xl border border-current/15 px-4 py-3 hover:border-(--color-primary)/40 transition-colors"
+          aria-label="Reportar un problema por email"
         >
-          <span className="text-(--color-primary)"><Download size={20} /></span>
+          <span className="text-(--color-primary)"><Mail size={20} /></span>
           <div className="flex flex-col">
-            <span className="font-semibold text-sm">Instalar app</span>
-            <span className="text-xs opacity-50">Accedé desde tu pantalla de inicio</span>
+            <span className="font-semibold text-sm">Reportar errores</span>
+            <span className="text-xs opacity-50">Cuéntame qué falló o qué te gustaría</span>
           </div>
           <span className="ml-auto opacity-30 text-sm">→</span>
-        </Link>
+        </a>
 
-        {/* ── Logout ───────────────────────────────────────────────── */}
+        {/* ── Cerrar sesión ────────────────────────────────────────── */}
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors mt-4"
+          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors mt-2"
         >
           Cerrar sesión
         </button>
+
+        {/* ── Footer: versión + créditos ─────────────────────────── */}
+        <footer className="flex flex-col items-center gap-1 pt-6 pb-2 text-center">
+          <span className="text-[11px] font-mono opacity-50">v{APP_VERSION}</span>
+          <span className="text-[11px] opacity-50">
+            Por Ruben Salas (con apoyo de Claude{' '}
+            <span aria-label="corazón naranja" role="img">🧡</span>).
+          </span>
+        </footer>
       </main>
 
       <BottomNav />

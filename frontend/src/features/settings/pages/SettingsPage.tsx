@@ -58,7 +58,6 @@ const TIMEZONES = [
   'Australia/Sydney',
 ]
 
-const APP_VERSION = __APP_VERSION__
 
 export function SettingsPage() {
   const { user, logout } = useAuth()
@@ -299,36 +298,6 @@ export function SettingsPage() {
               )}
             </div>
           )}
-        </section>
-
-        {/* ── Acerca de ─────────────────────────────────────────────────── */}
-        <section>
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
-            Acerca de
-          </p>
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between py-2 border-b border-current/10">
-              <span className="opacity-60">Versión</span>
-              <span className="font-mono">{APP_VERSION}</span>
-            </div>
-            <p className="text-xs opacity-50 mt-2">¿Algún problema o sugerencia?</p>
-            <div className="flex flex-col gap-2">
-              <a
-                href={`mailto:rubensalas0907@gmail.com?subject=${encodeURIComponent(`Study Timer v${APP_VERSION} - Reporte`)}&body=${encodeURIComponent(`\n\n---\nUsuario: ${user?.email ?? ''}\nVersión: ${APP_VERSION}`)}`}
-                className="py-2 text-(--color-primary) font-medium"
-              >
-                Reportar por email →
-              </a>
-              <a
-                href={`https://wa.me/573202784994?text=${encodeURIComponent(`Hola, te escribo por Study Timer v${APP_VERSION}. `)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-2 text-(--color-primary) font-medium"
-              >
-                Reportar por WhatsApp →
-              </a>
-            </div>
-          </div>
         </section>
 
         {/* ── Cerrar sesión ─────────────────────────────────────────────── */}
