@@ -192,7 +192,8 @@ export function useWeeklyRanking() {
           userId: u.id,
           displayName: u.displayName,
           friendCode: u.friendCode,
-          avatarUrl: u.avatarUrl,
+          avatar: u.avatar,
+          avatarPreset: u.avatarPreset,
           totalSec,
           isMe: u.id === myId,
         }
