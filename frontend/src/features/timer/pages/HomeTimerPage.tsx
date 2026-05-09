@@ -15,6 +15,8 @@ import { useStats } from '@/features/stats/hooks/useStats'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { SubjectPicker } from '@/features/subjects/components/SubjectPicker'
 import { ActiveSessionBanner } from '../components/ActiveSessionBanner'
+import { ACTIVE_SESSION_KEY } from '../store'
+import pb from '@/shared/pb'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
@@ -34,6 +36,19 @@ export function HomeTimerPage() {
   // re-opened it), hide the mode selectors so a stray tap can't create a new
   // session that would orphan the open one.
   const hasActiveSession = status === 'running' || status === 'paused'
+
+  // ── TEMP DEBUG: tiny pill visible on /home so we can diagnose why the
+  //    active-session banner doesn't surface after closing the app. Remove
+  //    once the issue is confirmed fixed.
+  const debugInfo = (() => {
+    const ls = localStorage.getItem(ACTIVE_SESSION_KEY)
+    return {
+      ls: ls ? 'present' : 'missing',
+      status,
+      auth: pb.authStore.isValid ? 'yes' : 'no',
+      sid: ls ? (() => { try { return (JSON.parse(ls) as { sessionId?: string }).sessionId?.slice(0,6) ?? '?' } catch { return 'parse-err' } })() : '-',
+    }
+  })()
 
   const weeklyGoalSec = (user?.weeklyGoalMinutes ?? 600) * 60
   const weekProgressPercent = Math.min(100, Math.round((weekSec / weeklyGoalSec) * 100))
@@ -90,6 +105,11 @@ export function HomeTimerPage() {
       </header>
 
       <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-4 gap-5">
+        {/* TEMP DEBUG pill */}
+        <div className="rounded bg-yellow-500/20 text-yellow-300 text-[10px] font-mono px-2 py-1 leading-tight">
+          LS={debugInfo.ls} · status={debugInfo.status} · auth={debugInfo.auth} · sid={debugInfo.sid}
+        </div>
+
         {/* Stats strip */}
         <div className="rounded-2xl bg-(--color-surface-raised) px-5 py-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
