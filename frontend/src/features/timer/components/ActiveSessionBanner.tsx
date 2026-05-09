@@ -31,7 +31,7 @@ export function ActiveSessionBanner() {
     }
     void pb
       .collection('study_sessions')
-      .getOne(sessionId)
+      .getOne(sessionId, { requestKey: `banner-subject-${sessionId}` })
       .then((r) => {
         if (cancelled) return
         const sid = (r['subject'] as string | undefined) || null

@@ -1,18 +1,4 @@
 // useTimer.ts — Core timer hook
-//
-// TEMP DEBUG helper — writes step messages to localStorage so the
-// HomeTimerPage debug pill can display them without DevTools.
-function dbg(msg: string) {
-  try {
-    const raw = localStorage.getItem('dbg:rehydrate') ?? '[]'
-    const arr = JSON.parse(raw) as Array<{ ts: number; msg: string }>
-    arr.push({ ts: Date.now(), msg })
-    while (arr.length > 6) arr.shift()
-    localStorage.setItem('dbg:rehydrate', JSON.stringify(arr))
-  } catch {
-    // ignore
-  }
-}
 
 // Manages the 3 timer modes (stopwatch, countdown, pomodoro) with pause/resume/stop.
 // State lives in zustand store (survives navigation), with localStorage for reload recovery.
@@ -186,28 +172,17 @@ export function useTimer(options: UseTimerOptions = {}) {
   // verify against the server in the background.
   useEffect(() => {
     const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
-    dbg(`mount, ls=${raw ? 'yes' : 'no'}`)
     if (!raw) return
-
-    if (!pb.authStore.isValid) {
-      dbg('skip: auth invalid')
-      return
-    }
-    if (useTimerStore.getState().status !== 'idle') {
-      dbg('skip: status not idle')
-      return
-    }
+    if (!pb.authStore.isValid) return
+    if (useTimerStore.getState().status !== 'idle') return
 
     let data: ActiveSessionData
     try {
       data = JSON.parse(raw) as ActiveSessionData
     } catch {
-      dbg('parse fail, clearing')
       localStorage.removeItem(ACTIVE_SESSION_KEY)
       return
     }
-
-    dbg(`restore sid=${data.sessionId.slice(0,6)}`)
 
     // ── Step 1: optimistic local restore ────────────────────────────────
     const store = useTimerStore.getState()
@@ -236,16 +211,12 @@ export function useTimer(options: UseTimerOptions = {}) {
 
     void (async () => {
       const record = await getSession(data.sessionId)
-      dbg(`verify ${record ? `endedAt=${record.endedAt === null ? 'null' : '"' + record.endedAt + '"'}` : 'NOT_FOUND'}`)
       if (cancelled) return
 
       if (!record || record.endedAt !== null) {
-        dbg('teardown')
         clearTick()
         localStorage.removeItem(ACTIVE_SESSION_KEY)
         useTimerStore.getState().resetTimer()
-      } else {
-        dbg('verify ok')
       }
     })()
 

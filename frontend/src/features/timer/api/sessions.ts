@@ -61,7 +61,14 @@ export async function endSession(id: string, durationSec: number): Promise<void>
  */
 export async function getSession(id: string): Promise<{ id: string; endedAt: string | null; startedAt: string } | null> {
   try {
-    const record = await pb.collection('study_sessions').getOne(id)
+    // PB SDK auto-cancels duplicate concurrent requests sharing the same
+    // URL+method. Other code (e.g. ActiveSessionBanner) also fetches this
+    // record, which used to silently cancel our rehydrate-verify call and
+    // make the hook think the session no longer existed. Using a unique
+    // requestKey opts this call out of the auto-cancel group.
+    const record = await pb.collection('study_sessions').getOne(id, {
+      requestKey: `session-verify-${id}`,
+    })
     const rawEnded = record['endedAt'] as string | null | undefined
     return {
       id: record.id,
