@@ -14,6 +14,7 @@ import { CountdownConfigForm } from '../components/CountdownConfigForm'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { SubjectPicker } from '@/features/subjects/components/SubjectPicker'
+import { ActiveSessionBanner } from '../components/ActiveSessionBanner'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
@@ -21,13 +22,18 @@ type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
 export function HomeTimerPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { start } = useTimer()
+  const { start, status } = useTimer()
   // Same source of truth as the Stats page — derives today/week from a single
   // 90-day session fetch. Avoids the divergence we had with a separate hook.
   const { todaySec, weekSec } = useStats(user?.timezone as string ?? 'UTC')
 
   const [selectedMode, setSelectedMode] = useState<ModeSelection>(null)
   const [subjectId, setSubjectId] = useState<string | null>(null)
+
+  // While a session is running or paused (e.g. user closed the app and just
+  // re-opened it), hide the mode selectors so a stray tap can't create a new
+  // session that would orphan the open one.
+  const hasActiveSession = status === 'running' || status === 'paused'
 
   const weeklyGoalSec = (user?.weeklyGoalMinutes ?? 600) * 60
   const weekProgressPercent = Math.min(100, Math.round((weekSec / weeklyGoalSec) * 100))
@@ -110,13 +116,20 @@ export function HomeTimerPage() {
           </div>
         </div>
 
-        {/* Subject selector — only visible while choosing mode */}
-        {selectedMode == null && (
+        {/* Active session banner — surfaces a session left running so the
+            user always knows it survived an app close or accidental nav. */}
+        {hasActiveSession && <ActiveSessionBanner />}
+
+        {/* Subject selector — only visible while choosing mode AND there's no
+            session in progress (we don't want a pre-selection while the user
+            is looking at an already-running session). */}
+        {!hasActiveSession && selectedMode == null && (
           <SubjectPicker value={subjectId} onChange={setSubjectId} />
         )}
 
-        {/* Mode selection */}
-        {selectedMode == null && (
+        {/* Mode selection — hidden when a session is active so a stray tap
+            cannot start a new session while one is already open. */}
+        {!hasActiveSession && selectedMode == null && (
           <>
             <h2 className="text-sm uppercase tracking-widest opacity-50 -mb-2">
               Selecciona un modo
@@ -145,7 +158,7 @@ export function HomeTimerPage() {
         )}
 
         {/* Pomodoro config */}
-        {selectedMode === 'pomodoro' && (
+        {!hasActiveSession && selectedMode === 'pomodoro' && (
           <div className="flex flex-col gap-4">
             <h2 className="font-semibold text-lg">Configurar Pomodoro</h2>
             <PomodoroConfigForm
@@ -156,7 +169,7 @@ export function HomeTimerPage() {
         )}
 
         {/* Countdown config */}
-        {selectedMode === 'countdown' && (
+        {!hasActiveSession && selectedMode === 'countdown' && (
           <div className="flex flex-col gap-4">
             <h2 className="font-semibold text-lg">Configurar cuenta regresiva</h2>
             <CountdownConfigForm

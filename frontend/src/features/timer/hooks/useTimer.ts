@@ -165,8 +165,15 @@ export function useTimer(options: UseTimerOptions = {}) {
     }
   }, [clearTick, startTick])
 
-  // Rehydrate active session from localStorage on mount
-  // Only runs once on mount — idempotent guard via store.status check
+  // Rehydrate active session from localStorage on mount.
+  //
+  // We restore the store OPTIMISTICALLY (synchronously from localStorage) and
+  // verify against the server in the background. The previous flow waited for
+  // the server round-trip before showing anything, so for ~200-500ms the user
+  // saw an idle home page and could accidentally start a new session that
+  // would orphan the still-open one in the DB.
+  //
+  // Only runs once on mount — idempotent guard via store.status check.
   useEffect(() => {
     const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
     if (!raw) return
@@ -175,58 +182,57 @@ export function useTimer(options: UseTimerOptions = {}) {
     if (!pb.authStore.isValid) return
     if (useTimerStore.getState().status !== 'idle') return
 
+    let data: ActiveSessionData
+    try {
+      data = JSON.parse(raw) as ActiveSessionData
+    } catch {
+      localStorage.removeItem(ACTIVE_SESSION_KEY)
+      return
+    }
+
+    // ── Step 1: optimistic local restore ────────────────────────────────
+    const store = useTimerStore.getState()
+    const now = Date.now()
+    const elapsedSec = Math.floor((now - data.startedAt - data.totalPausedMs) / 1000)
+
+    store.resetTimer()
+    store.setMode(data.mode)
+    store.setStatus('running')
+    store.setSessionId(data.sessionId)
+    store.setPomodoroConfig(data.pomodoroConfig)
+    store.setTargetSec(data.targetSec)
+    store.setSessionStartedAt(data.startedAt)
+    store.setCurrentCycle(data.currentCycle)
+    store.setPomodoroPhase(data.pomodoroPhase)
+    store.setElapsedSec(elapsedSec)
+
+    if (data.mode === 'countdown' && data.targetSec != null) {
+      store.setRemainingSec(Math.max(0, data.targetSec - elapsedSec))
+    }
+
+    startTick()
+
+    // ── Step 2: verify on server in the background ──────────────────────
     let cancelled = false
 
-    const rehydrate = async () => {
-      let data: ActiveSessionData
-      try {
-        data = JSON.parse(raw) as ActiveSessionData
-      } catch {
-        localStorage.removeItem(ACTIVE_SESSION_KEY)
-        return
-      }
-
-      // Verify the session is still active on the server
+    void (async () => {
       const record = await getSession(data.sessionId)
-
       if (cancelled) return
 
       if (!record || record.endedAt !== null) {
-        // Stale entry — clear it, stay idle
+        // Session was ended elsewhere (or deleted) — tear down our optimistic
+        // restoration so the user isn't tracking a phantom session.
+        clearTick()
         localStorage.removeItem(ACTIVE_SESSION_KEY)
-        return
+        useTimerStore.getState().resetTimer()
       }
-
-      // Session is live — restore store state
-      const store = useTimerStore.getState()
-      const now = Date.now()
-      const elapsedSec = Math.floor((now - data.startedAt - data.totalPausedMs) / 1000)
-
-      store.resetTimer()
-      store.setMode(data.mode)
-      store.setStatus('running')
-      store.setSessionId(data.sessionId)
-      store.setPomodoroConfig(data.pomodoroConfig)
-      store.setTargetSec(data.targetSec)
-      store.setSessionStartedAt(data.startedAt)
-      store.setCurrentCycle(data.currentCycle)
-      store.setPomodoroPhase(data.pomodoroPhase)
-      store.setElapsedSec(elapsedSec)
-
-      if (data.mode === 'countdown' && data.targetSec != null) {
-        store.setRemainingSec(Math.max(0, data.targetSec - elapsedSec))
-      }
-
-      startTick()
-    }
-
-    void rehydrate()
+    })()
 
     return () => {
       cancelled = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startTick])
+  }, [startTick, clearTick])
 
   // --- Public API ---
 
