@@ -11,31 +11,20 @@
 // gracefully no-ops on browsers without the API.
 import { useEffect } from 'react'
 
-interface NavigatorWithWakeLock extends Navigator {
-  wakeLock?: {
-    request: (type: 'screen') => Promise<WakeLockSentinelLike>
-  }
-}
-
-interface WakeLockSentinelLike {
-  released: boolean
-  release: () => Promise<void>
-  addEventListener: (type: 'release', listener: () => void) => void
-}
-
 export function useWakeLock(enabled: boolean) {
   useEffect(() => {
-    const nav = navigator as NavigatorWithWakeLock
-    if (!nav.wakeLock || !enabled) return
+    // Older lib.dom releases didn't include WakeLock in Navigator at all,
+    // so feature-detect at runtime instead of relying on TS narrowing.
+    const wakeLock = (navigator as Navigator & { wakeLock?: WakeLock }).wakeLock
+    if (!wakeLock || !enabled) return
 
-    let sentinel: WakeLockSentinelLike | null = null
+    let sentinel: WakeLockSentinel | null = null
     let cancelled = false
 
     async function acquire() {
       try {
-        const s = await nav.wakeLock!.request('screen')
+        const s = await wakeLock!.request('screen')
         if (cancelled) {
-          // Effect was torn down between the request and resolution
           await s.release().catch(() => {})
           return
         }
@@ -47,9 +36,10 @@ export function useWakeLock(enabled: boolean) {
     }
 
     function onVisibility() {
-      // The browser auto-releases the lock when the page is hidden.
-      // Re-acquire when it becomes visible again.
-      if (document.visibilityState === 'visible' && (!sentinel || sentinel.released)) {
+      if (
+        document.visibilityState === 'visible' &&
+        (!sentinel || sentinel.released)
+      ) {
         void acquire()
       }
     }
