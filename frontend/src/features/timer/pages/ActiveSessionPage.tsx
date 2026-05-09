@@ -8,6 +8,7 @@ import { Play, Pause, Square, Focus } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { TimerDisplay } from '../components/TimerDisplay'
 import { TimerRing } from '../components/TimerRing'
+import { useWakeLock } from '@/shared/hooks/useWakeLock'
 
 function ConfirmStopModal({
   onConfirm,
@@ -68,6 +69,10 @@ export function ActiveSessionPage() {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [pulse, setPulse] = useState(false)
   const ringRef = useRef<HTMLDivElement>(null)
+
+  // Keep the screen awake while the timer is actively running. Pausing or
+  // completing releases it so the device can sleep normally.
+  useWakeLock(status === 'running')
 
   // Trigger pulse animation when pomodoro phase changes
   const prevPhase = useRef(pomodoroPhase)
