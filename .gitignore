@@ -36,6 +36,9 @@ backend/.pb-binary/
 design-bundle/
 wireframes-raw.html
 
+# Cuyodoro promo video project (separate creative deliverable, not the app)
+study-timer-promo/
+
 # pnpm lockfile at root (lockfile lives in frontend/)
 # Uncomment if you add root-level pnpm deps:
 # pnpm-lock.yaml
