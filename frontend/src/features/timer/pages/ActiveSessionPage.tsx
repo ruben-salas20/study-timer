@@ -4,7 +4,7 @@
 // Modo Focus is a visual-only toggle in F2.
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, Square, Focus } from 'lucide-react'
+import { Play, Pause, Square } from 'lucide-react'
 import { useTimer } from '../hooks/useTimer'
 import { TimerDisplay } from '../components/TimerDisplay'
 import { TimerRing } from '../components/TimerRing'
@@ -66,7 +66,6 @@ export function ActiveSessionPage() {
     useTimer()
 
   const [showConfirmStop, setShowConfirmStop] = useState(false)
-  const [isFocusMode, setIsFocusMode] = useState(false)
   const [pulse, setPulse] = useState(false)
   const ringRef = useRef<HTMLDivElement>(null)
 
@@ -113,30 +112,10 @@ export function ActiveSessionPage() {
   }
 
   return (
-    <div
-      className={[
-        'flex flex-col items-center justify-between min-h-screen bg-background text-foreground px-6',
-        'py-safe',
-        isFocusMode ? 'bg-black text-white' : '',
-      ].join(' ')}
-    >
+    <div className="flex flex-col items-center justify-between min-h-screen bg-background text-foreground px-6 py-safe">
       {/* Top bar */}
-      <header className="w-full flex items-center justify-between pt-12 pb-4">
+      <header className="w-full flex items-center justify-center pt-12 pb-4">
         <span className="text-sm opacity-60 font-medium">{modeLabel}</span>
-        <button
-          type="button"
-          onClick={() => setIsFocusMode((v) => !v)}
-          title="Modo Focus (visual)"
-          className={[
-            'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border',
-            isFocusMode
-              ? 'border-white/30 text-white/80'
-              : 'border-current/20 opacity-50',
-          ].join(' ')}
-        >
-          <Focus size={13} />
-          Focus
-        </button>
       </header>
 
       {/* Timer display */}
