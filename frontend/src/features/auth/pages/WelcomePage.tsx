@@ -1,9 +1,5 @@
-// WelcomePage.tsx — T14
-// Landing screen for unauthenticated users.
-// Layout ref: hifi-screens-1.jsx HFWelcome
-// Pure presentation — no logic, just navigation.
+// WelcomePage.tsx — Landing screen for unauthenticated users.
 import { useNavigate } from 'react-router-dom'
-import { Timer } from 'lucide-react'
 
 export function WelcomePage() {
   const navigate = useNavigate()
@@ -16,13 +12,13 @@ export function WelcomePage() {
       >
         {/* Hero area */}
         <div className="flex flex-col flex-1 items-center justify-center gap-8">
-          {/* Logo / icon */}
-          <div
-            className="flex items-center justify-center w-36 h-36 rounded-[34px] bg-(--color-primary)/10"
-            aria-hidden="true"
-          >
-            <Timer size={64} className="text-(--color-primary)" />
-          </div>
+          {/* Logo — uses the precompressed PWA icon (298 KB) instead of
+              the original logo.png (4.6 MB) so welcome loads fast. */}
+          <img
+            src="/icons/icon-512x512.png"
+            alt="Study Timer"
+            className="w-40 h-40 rounded-[34px] object-contain"
+          />
 
           {/* Title + tagline */}
           <div className="text-center">
