@@ -1,5 +1,6 @@
 // RankingRow.tsx — A single row in the weekly ranking list
 import type { RankingEntry } from '../hooks/useWeeklyRanking'
+import { Avatar } from '@/features/avatar/components/Avatar'
 
 interface RankingRowProps {
   entry: RankingEntry
@@ -11,15 +12,6 @@ function formatMinutes(totalSec: number): string {
   const m = Math.floor((totalSec % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m}m`
-}
-
-function initials(displayName: string): string {
-  return displayName
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2)
 }
 
 export function RankingRow({ entry, rank }: RankingRowProps) {
@@ -44,10 +36,13 @@ export function RankingRow({ entry, rank }: RankingRowProps) {
         {rank}
       </span>
 
-      {/* Avatar / initials */}
-      <div className="flex-shrink-0 w-9 h-9 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-sm font-semibold">
-        {initials(entry.displayName)}
-      </div>
+      <Avatar
+        userId={entry.userId}
+        avatar={entry.avatar}
+        avatarPreset={entry.avatarPreset}
+        displayName={entry.displayName}
+        className="flex-shrink-0 w-9 h-9"
+      />
 
       {/* Name + friend code */}
       <div className="flex flex-col flex-1 min-w-0">

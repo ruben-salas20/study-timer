@@ -12,6 +12,7 @@ import { GroupStreakCalendar } from '../components/GroupStreakCalendar'
 import { PrizeDisplay } from '../components/PrizeDisplay'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
+import { Avatar } from '@/features/avatar/components/Avatar'
 import pb from '@/shared/pb'
 import type { Participant, Challenge } from '../lib/aggregators'
 import type { ChallengeRecord } from '../api/challenges'
@@ -227,15 +228,19 @@ export function ChallengeDetailPage() {
           <div className="flex flex-col gap-2">
             {challenge.participants.map((p) => {
               const name = p.user === myId ? 'Tú' : p.userDisplayName
-              const initial = (p.user === myId ? 'T' : p.userDisplayName).charAt(0).toUpperCase()
               return (
                 <div
                   key={p.id}
                   className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-2"
                 >
-                  <div className="w-7 h-7 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-xs font-bold">
-                    {initial}
-                  </div>
+                  <Avatar
+                    userId={p.user}
+                    avatar={p.userAvatar}
+                    avatarPreset={p.userAvatarPreset}
+                    displayName={p.userDisplayName}
+                    className="w-7 h-7"
+                    textClassName="text-xs"
+                  />
                   <span className="text-sm flex-1">{name}</span>
                   {challenge.createdBy === p.user && (
                     <span className="text-[10px] opacity-40">creador</span>

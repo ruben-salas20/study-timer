@@ -39,6 +39,10 @@ export interface ParticipantRecord {
   userDisplayName: string
   /** Resolved friendCode from expand (optional). */
   userFriendCode?: string
+  /** Resolved avatar filename from expand (optional). */
+  userAvatar?: string
+  /** Resolved avatar preset key from expand (optional). */
+  userAvatarPreset?: string
   joinedAt: string
   progressSec: number
   streakDays: number
@@ -85,6 +89,8 @@ function mapChallenge(record: Record<string, unknown>): ChallengeRecord {
       user: userId,
       userDisplayName: displayName,
       userFriendCode: friendCode,
+      userAvatar: (userObj?.avatar as string | undefined) || undefined,
+      userAvatarPreset: (userObj?.avatarPreset as string | undefined) || undefined,
       joinedAt: part.joinedAt as string,
       progressSec: Number(part.progressSec ?? 0),
       streakDays: Number(part.streakDays ?? 0),

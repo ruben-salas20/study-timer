@@ -6,15 +6,7 @@ import { BarChart2, User, Settings, Download, BookOpen } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
+import { Avatar } from '@/features/avatar/components/Avatar'
 
 interface NavCard {
   to: string
@@ -72,11 +64,14 @@ export function MePage() {
 
         {/* ── Avatar + identity ────────────────────────────────────── */}
         <div className="flex flex-col items-center gap-2 py-4">
-          <div className="w-20 h-20 rounded-full bg-(--color-primary) flex items-center justify-center">
-            <span className="text-3xl font-bold text-white">
-              {getInitials(displayName || '?')}
-            </span>
-          </div>
+          <Avatar
+            userId={(user?.id as string | undefined) ?? ''}
+            avatar={user?.avatar as string | undefined}
+            avatarPreset={user?.avatarPreset as string | undefined}
+            displayName={displayName || '?'}
+            className="w-20 h-20"
+            textClassName="text-3xl"
+          />
           <p className="text-xl font-bold">{displayName}</p>
           <p className="text-sm font-mono opacity-50">{friendCode}</p>
         </div>

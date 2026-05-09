@@ -12,7 +12,10 @@ export interface FriendUserInfo {
   id: string
   displayName: string
   friendCode: string
-  avatarUrl?: string
+  /** Filename of the uploaded avatar image (PB FileField). */
+  avatar?: string
+  /** Preset cuy key, mutually exclusive with `avatar`. */
+  avatarPreset?: string
 }
 
 export interface FriendshipEntry {
@@ -47,7 +50,8 @@ function otherUserFromExpand(
     id: otherExpand.id as string,
     displayName: (otherExpand.displayName as string) ?? '',
     friendCode: (otherExpand.friendCode as string) ?? '',
-    avatarUrl: otherExpand.avatarUrl as string | undefined,
+    avatar: (otherExpand.avatar as string | undefined) || undefined,
+    avatarPreset: (otherExpand.avatarPreset as string | undefined) || undefined,
   }
 }
 

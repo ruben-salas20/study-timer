@@ -10,29 +10,8 @@ import { updateProfile, changePassword } from '../api/profile'
 import { displayNameSchema, weeklyGoalSchema, passwordChangeSchema } from '../schemas'
 import type { PasswordChangeInput } from '../schemas'
 import { BottomNav } from '@/shared/ui/BottomNav'
-
-// ── Avatar initials helper ────────────────────────────────────────────────────
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function AvatarCircle({ name }: { name: string }) {
-  return (
-    <div className="w-20 h-20 rounded-full bg-(--color-primary) flex items-center justify-center">
-      <span className="text-3xl font-bold text-white tabular-nums">
-        {getInitials(name)}
-      </span>
-    </div>
-  )
-}
+import { Avatar } from '@/features/avatar/components/Avatar'
+import { AvatarPickerModal } from '@/features/avatar/components/AvatarPickerModal'
 
 // ── Password change modal ─────────────────────────────────────────────────────
 
@@ -200,12 +179,16 @@ export function ProfilePage() {
   const [editingName, setEditingName] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [showGoalModal, setShowGoalModal] = useState(false)
+  const [showAvatarModal, setShowAvatarModal] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  const userId = (user?.id as string | undefined) ?? ''
   const displayName = (user?.displayName as string | undefined) ?? ''
   const friendCode = (user?.friendCode as string | undefined) ?? '------'
   const weeklyGoal = (user?.weeklyGoalMinutes as number | undefined) ?? 300
   const email = (user?.email as string | undefined) ?? ''
+  const avatar = user?.avatar as string | undefined
+  const avatarPreset = user?.avatarPreset as string | undefined
   const created = user?.created
     ? new Date(user.created as string).toLocaleDateString('es-AR', {
         year: 'numeric',
@@ -253,7 +236,24 @@ export function ProfilePage() {
 
         {/* ── Avatar + name ─────────────────────────────────────────── */}
         <div className="flex flex-col items-center gap-3 py-4">
-          <AvatarCircle name={displayName || '?'} />
+          <button
+            type="button"
+            onClick={() => setShowAvatarModal(true)}
+            className="relative group rounded-full"
+            aria-label="Cambiar avatar"
+          >
+            <Avatar
+              userId={userId}
+              avatar={avatar}
+              avatarPreset={avatarPreset}
+              displayName={displayName}
+              className="w-20 h-20"
+              textClassName="text-3xl"
+            />
+            <span className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 bg-black/40 text-white text-xs font-medium transition-opacity">
+              Cambiar
+            </span>
+          </button>
 
           {editingName ? (
             <form
@@ -360,6 +360,15 @@ export function ProfilePage() {
           initial={weeklyGoal}
           onClose={() => setShowGoalModal(false)}
           onSave={saveGoal}
+        />
+      )}
+      {showAvatarModal && (
+        <AvatarPickerModal
+          userId={userId}
+          currentAvatar={avatar}
+          currentPreset={avatarPreset}
+          displayName={displayName}
+          onClose={() => setShowAvatarModal(false)}
         />
       )}
 

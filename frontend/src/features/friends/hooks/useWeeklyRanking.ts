@@ -15,7 +15,8 @@ export interface RankingEntry {
   userId: string
   displayName: string
   friendCode: string
-  avatarUrl?: string
+  avatar?: string
+  avatarPreset?: string
   totalSec: number
   isMe: boolean
 }
@@ -76,7 +77,8 @@ export function aggregateWeeklyRanking(
     userId: u.id,
     displayName: u.displayName,
     friendCode: u.friendCode,
-    avatarUrl: u.avatarUrl,
+    avatar: u.avatar,
+    avatarPreset: u.avatarPreset,
     totalSec: sumByUser.get(u.id) ?? 0,
     isMe: u.id === myUserId,
   }))
@@ -109,7 +111,8 @@ export function useWeeklyRanking() {
       id: myId,
       displayName: (pb.authStore.model?.displayName as string) ?? 'Yo',
       friendCode: (pb.authStore.model?.friendCode as string) ?? '',
-      avatarUrl: pb.authStore.model?.avatarUrl as string | undefined,
+      avatar: (pb.authStore.model?.avatar as string | undefined) || undefined,
+      avatarPreset: (pb.authStore.model?.avatarPreset as string | undefined) || undefined,
     }
     return [me, ...friendEntries.map((f) => f.user)]
   }, [myId, friendEntries])

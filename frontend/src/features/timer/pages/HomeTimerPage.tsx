@@ -15,6 +15,7 @@ import { useStats } from '@/features/stats/hooks/useStats'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { SubjectPicker } from '@/features/subjects/components/SubjectPicker'
 import { ActiveSessionBanner } from '../components/ActiveSessionBanner'
+import { Avatar } from '@/features/avatar/components/Avatar'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
@@ -81,11 +82,18 @@ export function HomeTimerPage() {
         <button
           type="button"
           onClick={() => navigate('/me')}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-(--color-primary) text-white font-semibold text-lg"
+          className="rounded-full"
           aria-label="Ir a mi perfil"
           title="Mi perfil"
         >
-          {user?.displayName ? String(user.displayName)[0].toUpperCase() : '?'}
+          <Avatar
+            userId={(user?.id as string | undefined) ?? ''}
+            avatar={user?.avatar as string | undefined}
+            avatarPreset={user?.avatarPreset as string | undefined}
+            displayName={(user?.displayName as string | undefined) ?? '?'}
+            className="w-10 h-10"
+            textClassName="text-base"
+          />
         </button>
       </header>
 

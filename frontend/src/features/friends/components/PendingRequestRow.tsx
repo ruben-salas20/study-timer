@@ -1,6 +1,7 @@
 // PendingRequestRow.tsx — A single incoming friend request row
 // Shows the requester info and Accept / Reject buttons.
 import type { FriendshipEntry } from '../api/friends'
+import { Avatar } from '@/features/avatar/components/Avatar'
 
 interface PendingRequestRowProps {
   entry: FriendshipEntry
@@ -8,15 +9,6 @@ interface PendingRequestRowProps {
   onReject: (friendshipId: string) => void
   isAccepting?: boolean
   isRejecting?: boolean
-}
-
-function initials(displayName: string): string {
-  return displayName
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2)
 }
 
 export function PendingRequestRow({
@@ -28,10 +20,13 @@ export function PendingRequestRow({
 }: PendingRequestRowProps) {
   return (
     <div className="flex items-center gap-3 rounded-xl bg-(--color-surface-raised) px-4 py-3">
-      {/* Avatar / initials */}
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-(--color-primary)/20 flex items-center justify-center font-semibold text-sm">
-        {initials(entry.user.displayName)}
-      </div>
+      <Avatar
+        userId={entry.user.id}
+        avatar={entry.user.avatar}
+        avatarPreset={entry.user.avatarPreset}
+        displayName={entry.user.displayName}
+        className="flex-shrink-0 w-10 h-10"
+      />
 
       {/* Info */}
       <div className="flex flex-col flex-1 min-w-0">

@@ -17,6 +17,7 @@ import { DateTimePicker } from '@/shared/ui/DateTimePicker'
 import { WheelPicker } from '@/shared/ui/WheelPicker'
 import type { ChallengeType } from '../api/challenges'
 import { useFriendsList } from '@/features/friends/hooks/useFriends'
+import { Avatar } from '@/features/avatar/components/Avatar'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -441,9 +442,13 @@ export function NewChallengePage() {
                       ].join(' ')}
                       aria-pressed={isSelected}
                     >
-                      <div className="w-9 h-9 rounded-full bg-(--color-primary)/20 flex items-center justify-center text-sm font-bold shrink-0">
-                        {entry.user.displayName.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar
+                        userId={entry.user.id}
+                        avatar={entry.user.avatar}
+                        avatarPreset={entry.user.avatarPreset}
+                        displayName={entry.user.displayName}
+                        className="w-9 h-9 shrink-0"
+                      />
                       <div className="flex flex-col flex-1 min-w-0">
                         <span className="text-sm font-medium truncate">
                           {entry.user.displayName}
