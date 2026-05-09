@@ -19,10 +19,15 @@ import type { ChallengeRecord } from '../api/challenges'
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(isoStr: string): string {
-  return new Date(isoStr).toLocaleDateString('es-ES', {
+  // Show date + time so participants can see exactly when a challenge
+  // begins or ends — important for same-day challenges where the hour
+  // determines the outcome.
+  return new Date(isoStr).toLocaleString('es-ES', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
