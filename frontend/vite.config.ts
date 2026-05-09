@@ -34,8 +34,8 @@ export default defineConfig({
       // manifest is served from /manifest.webmanifest in public/
       // vite-plugin-pwa merges this config with the static file or generates one
       manifest: {
-        name: 'Study Timer',
-        short_name: 'StudyTimer',
+        name: 'Cuyodoro',
+        short_name: 'Cuyodoro',
         description: 'Temporizador de estudio competitivo con amigos',
         theme_color: '#7c9a82',
         background_color: '#ffffff',

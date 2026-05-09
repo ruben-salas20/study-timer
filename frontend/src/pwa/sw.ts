@@ -127,7 +127,7 @@ registerRoute(
 
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {}
-  const title = (data.title as string | undefined) || 'Study Timer'
+  const title = (data.title as string | undefined) || 'Cuyodoro'
   const options: NotificationOptions = {
     body: (data.body as string | undefined) ?? '',
     icon: '/icons/icon-192x192.png',

@@ -16,13 +16,13 @@ export function WelcomePage() {
               the original logo.png (4.6 MB) so welcome loads fast. */}
           <img
             src="/icons/icon-512x512.png"
-            alt="Study Timer"
+            alt="Cuyodoro"
             className="w-40 h-40 rounded-[34px] object-contain"
           />
 
           {/* Title + tagline */}
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-foreground">Study Timer</h1>
+            <h1 className="text-4xl font-bold text-foreground">Cuyodoro</h1>
             <p className="mt-2 text-base leading-relaxed opacity-60 max-w-[280px]">
               Estudia con tus amigos.
               <br />

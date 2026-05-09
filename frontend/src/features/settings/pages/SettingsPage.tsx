@@ -282,7 +282,7 @@ export function SettingsPage() {
                     if ('serviceWorker' in navigator) {
                       navigator.serviceWorker.ready
                         .then((reg) =>
-                          reg.showNotification('Study Timer — prueba', {
+                          reg.showNotification('Cuyodoro — prueba', {
                             body: 'Las notificaciones funcionan correctamente',
                             icon: '/icons/icon-192x192.png',
                             tag: 'test-notification',

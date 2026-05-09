@@ -1,6 +1,6 @@
 {
-  "name": "Study Timer",
-  "short_name": "StudyTimer",
+  "name": "Cuyodoro",
+  "short_name": "Cuyodoro",
   "description": "Temporizador de estudio competitivo con amigos",
   "start_url": "/",
   "scope": "/",

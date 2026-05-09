@@ -53,7 +53,7 @@ export function MePage() {
   const email = (user?.email as string | undefined) ?? ''
 
   const reportHref = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(
-    `Study Timer v${APP_VERSION} - Reporte`
+    `Cuyodoro v${APP_VERSION} - Reporte`
   )}&body=${encodeURIComponent(`\n\n---\nUsuario: ${email}\nVersión: ${APP_VERSION}`)}`
 
   async function handleLogout() {

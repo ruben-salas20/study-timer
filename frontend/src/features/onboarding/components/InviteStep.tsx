@@ -27,7 +27,7 @@ export function InviteStep({ friendCode, onSkip, onComplete, isCompleting }: Inv
 
   async function handleShare() {
     const shareData = {
-      title: 'Study Timer',
+      title: 'Cuyodoro',
       text: `¡Estudiemos juntos! Usá mi código de amigo: ${friendCode}`,
     }
 

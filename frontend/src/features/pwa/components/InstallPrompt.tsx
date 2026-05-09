@@ -111,14 +111,14 @@ export function InstallPrompt() {
       <div className="flex-1">
         {showIOSHint ? (
           <>
-            <p className="text-sm font-semibold">Instalar Study Timer</p>
+            <p className="text-sm font-semibold">Instalar Cuyodoro</p>
             <p className="text-xs opacity-60 mt-0.5">
               Tocá <strong>Compartir</strong> → <strong>Agregar a pantalla de inicio</strong>
             </p>
           </>
         ) : (
           <>
-            <p className="text-sm font-semibold">Instalar Study Timer</p>
+            <p className="text-sm font-semibold">Instalar Cuyodoro</p>
             <p className="text-xs opacity-60 mt-0.5">
               Accedé más rápido desde tu pantalla de inicio
             </p>
