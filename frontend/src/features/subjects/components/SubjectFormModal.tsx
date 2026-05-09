@@ -1,6 +1,7 @@
 // SubjectFormModal.tsx — create / edit dialog for a subject.
 // Fields: emoji (optional), name, color (palette swatches).
 import { useState } from 'react'
+import { X as XIcon } from 'lucide-react'
 import type { SubjectInput, SubjectRecord } from '../api/subjects'
 
 interface SubjectFormModalProps {
@@ -9,6 +10,17 @@ interface SubjectFormModalProps {
   onCancel: () => void
   submitting?: boolean
 }
+
+// Curated emoji set focused on study / subject themes. Keeps the bundle tiny
+// vs. shipping a full emoji picker (emoji-picker-react ~500KB) and avoids the
+// "user pastes random text and breaks the chip" problem.
+const EMOJI_OPTIONS: string[] = [
+  '📚', '📖', '📝', '✏️', '📐', '📏', '🧮', '🔬',
+  '🔭', '🧪', '🧬', '🧠', '💻', '⌨️', '🎨', '🎭',
+  '🎵', '🎸', '🎤', '🏃', '⚽', '🏀', '🌍', '🗺️',
+  '📊', '📈', '💡', '⚡', '🔥', '⭐', '🎯', '🏆',
+  '❤️', '💼', '🩺', '⚖️', '🏛️', '🎓', '🌱', '☕',
+]
 
 const PALETTE: string[] = [
   '#84a98c', // sage green
@@ -79,25 +91,54 @@ export function SubjectFormModal({
           </div>
         </div>
 
-        {/* Name + emoji */}
-        <div className="flex gap-2">
-          <input
-            value={emoji}
-            onChange={(e) => setEmoji(e.target.value)}
-            placeholder="📚"
-            maxLength={4}
-            aria-label="Emoji"
-            className="w-14 text-center rounded-lg bg-white/5 border border-white/10 px-2 py-2.5 text-lg outline-none focus:border-(--color-primary)"
-          />
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre de la materia"
-            maxLength={60}
-            aria-label="Nombre"
-            className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
-            autoFocus
-          />
+        {/* Name only — emoji has its own dedicated picker below */}
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nombre de la materia"
+          maxLength={60}
+          aria-label="Nombre"
+          className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
+          autoFocus
+        />
+
+        {/* Emoji picker (curated grid) */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-widest opacity-60">Emoji</label>
+            {emoji && (
+              <button
+                type="button"
+                onClick={() => setEmoji('')}
+                className="inline-flex items-center gap-1 text-[11px] opacity-60 hover:opacity-100"
+                aria-label="Quitar emoji"
+              >
+                <XIcon size={11} /> Quitar
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-8 gap-1.5">
+            {EMOJI_OPTIONS.map((e) => {
+              const selected = e === emoji
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => setEmoji(selected ? '' : e)}
+                  aria-pressed={selected}
+                  aria-label={`Seleccionar ${e}`}
+                  className={[
+                    'aspect-square flex items-center justify-center rounded-lg text-xl transition-all',
+                    selected
+                      ? 'bg-(--color-primary)/20 ring-2 ring-(--color-primary)'
+                      : 'bg-white/[0.03] hover:bg-white/[0.08]',
+                  ].join(' ')}
+                >
+                  {e}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {/* Color palette */}
