@@ -13,11 +13,17 @@ export interface AvatarPreset {
 }
 
 export const AVATAR_PRESETS: AvatarPreset[] = [
-  // Add presets here as the assets are dropped in.
-  // { key: 'doctor',     label: 'Doctor' },
-  // { key: 'astronauta', label: 'Astronauta' },
-  // { key: 'profesor',   label: 'Profesor' },
-  // { key: 'cocinero',   label: 'Cocinero' },
+  { key: 'abogado',     label: 'Abogado' },
+  { key: 'agricultor',  label: 'Agricultor' },
+  { key: 'arquitecto',  label: 'Arquitecto' },
+  { key: 'artista',     label: 'Artista' },
+  { key: 'astronauta',  label: 'Astronauta' },
+  { key: 'chef',        label: 'Chef' },
+  { key: 'cientifico',  label: 'Científico' },
+  { key: 'ingeniero',   label: 'Ingeniero' },
+  { key: 'medico',      label: 'Médico' },
+  { key: 'musico',      label: 'Músico' },
+  { key: 'programador', label: 'Programador' },
 ]
 
 export function presetUrl(key: string): string {
