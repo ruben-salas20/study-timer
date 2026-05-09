@@ -118,23 +118,23 @@ export function MePage() {
           <span className="ml-auto opacity-30 text-sm">→</span>
         </a>
 
-        {/* ── Cerrar sesión ────────────────────────────────────────── */}
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors mt-2"
-        >
-          Cerrar sesión
-        </button>
-
-        {/* ── Footer: versión + créditos ─────────────────────────── */}
-        <footer className="flex flex-col items-center gap-1 pt-6 pb-2 text-center">
+        {/* ── Versión + créditos (antes del logout) ───────────────── */}
+        <div className="flex flex-col items-center gap-0.5 text-center -mt-1">
           <span className="text-[11px] font-mono opacity-50">v{APP_VERSION}</span>
           <span className="text-[11px] opacity-50">
             Por Ruben Salas (con apoyo de Claude{' '}
             <span aria-label="corazón naranja" role="img">🧡</span>).
           </span>
-        </footer>
+        </div>
+
+        {/* ── Cerrar sesión ────────────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="w-full py-3 rounded-xl border border-red-500/40 text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors"
+        >
+          Cerrar sesión
+        </button>
       </main>
 
       <BottomNav />

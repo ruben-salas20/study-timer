@@ -26,6 +26,10 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
   { key: 'programador', label: 'Programador' },
 ]
 
+// Version-stamp the URL so the Service Worker (which caches images
+// CacheFirst for 30 days) does not keep serving an outdated preset
+// after a new deploy that updates the artwork. Bumping the app version
+// in package.json is enough to bust the cache.
 export function presetUrl(key: string): string {
-  return `/avatars/presets/${key}.png`
+  return `/avatars/presets/${key}.png?v=${__APP_VERSION__}`
 }
