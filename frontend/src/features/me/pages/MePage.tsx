@@ -83,7 +83,7 @@ export function MePage() {
           <p className="text-sm font-mono opacity-50">{friendCode}</p>
         </div>
 
-        {/* ── Nav cards ─────────────────────────────────────────────── */}
+        {/* ── Nav cards (incl. notificaciones + reportar) ─────────── */}
         <div className="flex flex-col gap-3">
           {NAV_CARDS.map(({ to, icon, label, description }) => (
             <Link
@@ -99,27 +99,25 @@ export function MePage() {
               <span className="ml-auto opacity-30 text-sm">→</span>
             </Link>
           ))}
+
+          <EnableNotificationsCTA />
+
+          <a
+            href={reportHref}
+            className="flex items-center gap-4 rounded-xl border border-current/15 px-4 py-3 hover:border-(--color-primary)/40 transition-colors"
+            aria-label="Reportar un problema por email"
+          >
+            <span className="text-(--color-primary)"><Mail size={20} /></span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-sm">Reportar errores</span>
+              <span className="text-xs opacity-50">Cuéntame qué falló o qué te gustaría</span>
+            </div>
+            <span className="ml-auto opacity-30 text-sm">→</span>
+          </a>
         </div>
 
-        {/* ── Notificaciones CTA (F6) ─────────────────────────────── */}
-        <EnableNotificationsCTA />
-
-        {/* ── Reportar errores ─────────────────────────────────────── */}
-        <a
-          href={reportHref}
-          className="flex items-center gap-4 rounded-xl border border-current/15 px-4 py-3 hover:border-(--color-primary)/40 transition-colors"
-          aria-label="Reportar un problema por email"
-        >
-          <span className="text-(--color-primary)"><Mail size={20} /></span>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm">Reportar errores</span>
-            <span className="text-xs opacity-50">Cuéntame qué falló o qué te gustaría</span>
-          </div>
-          <span className="ml-auto opacity-30 text-sm">→</span>
-        </a>
-
-        {/* ── Versión + créditos (antes del logout) ───────────────── */}
-        <div className="flex flex-col items-center gap-0.5 text-center -mt-1">
+        {/* ── Versión + créditos ──────────────────────────────────── */}
+        <div className="flex flex-col items-center gap-0.5 text-center">
           <span className="text-[11px] font-mono opacity-50">v{APP_VERSION}</span>
           <span className="text-[11px] opacity-50">
             Por Ruben Salas (con apoyo de Claude{' '}
