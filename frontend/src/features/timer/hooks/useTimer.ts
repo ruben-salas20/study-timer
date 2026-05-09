@@ -1,4 +1,19 @@
 // useTimer.ts — Core timer hook
+//
+// TEMP DEBUG helper — writes step messages to localStorage so the
+// HomeTimerPage debug pill can display them without DevTools.
+function dbg(msg: string) {
+  try {
+    const raw = localStorage.getItem('dbg:rehydrate') ?? '[]'
+    const arr = JSON.parse(raw) as Array<{ ts: number; msg: string }>
+    arr.push({ ts: Date.now(), msg })
+    while (arr.length > 6) arr.shift()
+    localStorage.setItem('dbg:rehydrate', JSON.stringify(arr))
+  } catch {
+    // ignore
+  }
+}
+
 // Manages the 3 timer modes (stopwatch, countdown, pomodoro) with pause/resume/stop.
 // State lives in zustand store (survives navigation), with localStorage for reload recovery.
 // On stop: PATCH study_sessions with endedAt + durationSec, clear localStorage, reset store.
@@ -168,27 +183,31 @@ export function useTimer(options: UseTimerOptions = {}) {
   // Rehydrate active session from localStorage on mount.
   //
   // We restore the store OPTIMISTICALLY (synchronously from localStorage) and
-  // verify against the server in the background. The previous flow waited for
-  // the server round-trip before showing anything, so for ~200-500ms the user
-  // saw an idle home page and could accidentally start a new session that
-  // would orphan the still-open one in the DB.
-  //
-  // Only runs once on mount — idempotent guard via store.status check.
+  // verify against the server in the background.
   useEffect(() => {
     const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
+    dbg(`mount, ls=${raw ? 'yes' : 'no'}`)
     if (!raw) return
 
-    // Only rehydrate if the user is authenticated and store is idle
-    if (!pb.authStore.isValid) return
-    if (useTimerStore.getState().status !== 'idle') return
+    if (!pb.authStore.isValid) {
+      dbg('skip: auth invalid')
+      return
+    }
+    if (useTimerStore.getState().status !== 'idle') {
+      dbg('skip: status not idle')
+      return
+    }
 
     let data: ActiveSessionData
     try {
       data = JSON.parse(raw) as ActiveSessionData
     } catch {
+      dbg('parse fail, clearing')
       localStorage.removeItem(ACTIVE_SESSION_KEY)
       return
     }
+
+    dbg(`restore sid=${data.sessionId.slice(0,6)}`)
 
     // ── Step 1: optimistic local restore ────────────────────────────────
     const store = useTimerStore.getState()
@@ -217,14 +236,16 @@ export function useTimer(options: UseTimerOptions = {}) {
 
     void (async () => {
       const record = await getSession(data.sessionId)
+      dbg(`verify ${record ? `endedAt=${record.endedAt === null ? 'null' : '"' + record.endedAt + '"'}` : 'NOT_FOUND'}`)
       if (cancelled) return
 
       if (!record || record.endedAt !== null) {
-        // Session was ended elsewhere (or deleted) — tear down our optimistic
-        // restoration so the user isn't tracking a phantom session.
+        dbg('teardown')
         clearTick()
         localStorage.removeItem(ACTIVE_SESSION_KEY)
         useTimerStore.getState().resetTimer()
+      } else {
+        dbg('verify ok')
       }
     })()
 

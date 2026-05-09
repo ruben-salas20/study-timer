@@ -3,7 +3,7 @@
 // Three mode tiles: Pomodoro, Cronómetro (stopwatch), Regresivo (countdown)
 // Config modal appears inline after tile selection.
 // Stats strip: today's study time + week progress toward weeklyGoalMinutes.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Timer, Clock, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -34,6 +34,22 @@ export function HomeTimerPage() {
   // re-opened it), hide the mode selectors so a stray tap can't create a new
   // session that would orphan the open one.
   const hasActiveSession = status === 'running' || status === 'paused'
+
+  // ── TEMP DEBUG: show rehydrate trace in-page since we can't open DevTools
+  //    on the user's phone. Refresh every second so it picks up async events.
+  const [, force] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => force((n) => n + 1), 500)
+    return () => clearInterval(t)
+  }, [])
+  const dbgLog = (() => {
+    try {
+      const arr = JSON.parse(localStorage.getItem('dbg:rehydrate') ?? '[]') as Array<{ ts: number; msg: string }>
+      return arr.map((e) => `+${(e.ts % 100000).toString().padStart(5,'0')} ${e.msg}`).join('\n')
+    } catch {
+      return 'parse-err'
+    }
+  })()
 
   const weeklyGoalSec = (user?.weeklyGoalMinutes ?? 600) * 60
   const weekProgressPercent = Math.min(100, Math.round((weekSec / weeklyGoalSec) * 100))
@@ -90,6 +106,11 @@ export function HomeTimerPage() {
       </header>
 
       <main className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-4 gap-5">
+        {/* TEMP DEBUG */}
+        <pre className="rounded bg-yellow-500/10 text-yellow-300 text-[10px] font-mono px-2 py-1 leading-tight whitespace-pre-wrap">
+status={status} hasActive={String(hasActiveSession)}{'\n'}{dbgLog || '(no events)'}
+        </pre>
+
         {/* Stats strip */}
         <div className="rounded-2xl bg-(--color-surface-raised) px-5 py-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
