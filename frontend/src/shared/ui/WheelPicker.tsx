@@ -66,6 +66,14 @@ export function WheelPicker({
     }, 120)
   }, [value])
 
+  // Fade the top/bottom items via mask-image rather than colored overlays.
+  // Overlays (linear-gradient to var(--color-background)) leak the page bg
+  // colour into any tinted parent (cards, modals, etc.) and produce a hard
+  // edge where the gradient meets a different background. mask-image fades
+  // the actual content, so it composites correctly on ANY background.
+  const fadeMask =
+    'linear-gradient(to bottom, transparent 0%, black 22%, black 78%, transparent 100%)'
+
   return (
     <div
       role="listbox"
@@ -73,7 +81,7 @@ export function WheelPicker({
       className="relative"
       style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}
     >
-      {/* Center selection band */}
+      {/* Center selection band — drawn over the masked content */}
       <div
         className="pointer-events-none absolute inset-x-0 z-10"
         style={{
@@ -81,23 +89,6 @@ export function WheelPicker({
           height: ITEM_HEIGHT,
           borderTop: '1px solid color-mix(in oklch, currentColor 15%, transparent)',
           borderBottom: '1px solid color-mix(in oklch, currentColor 15%, transparent)',
-        }}
-      />
-
-      {/* Top fade */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-10"
-        style={{
-          height: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2),
-          background: 'linear-gradient(to bottom, var(--color-background) 30%, transparent)',
-        }}
-      />
-      {/* Bottom fade */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
-        style={{
-          height: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2),
-          background: 'linear-gradient(to top, var(--color-background) 30%, transparent)',
         }}
       />
 
@@ -110,6 +101,8 @@ export function WheelPicker({
           paddingTop: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2),
           paddingBottom: ITEM_HEIGHT * Math.floor(VISIBLE_ITEMS / 2),
           scrollbarWidth: 'none',
+          maskImage: fadeMask,
+          WebkitMaskImage: fadeMask,
         }}
       >
         {values.map((v) => {
