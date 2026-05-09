@@ -48,15 +48,24 @@ export async function endSession(id: string, durationSec: number): Promise<void>
 
 /**
  * getSession — fetch a single study_sessions record by id.
- * Used for rehydration: verify the session is still active (endedAt === null).
+ * Used for rehydration: verify the session is still active (endedAt is empty).
+ *
+ * IMPORTANT: PocketBase returns empty STRING ("") for unset datetime fields,
+ * not null. We normalise both "" and null/undefined to `null` here so callers
+ * can simply check `record.endedAt === null` to mean "still active". The
+ * previous version returned "" through and the caller's `!== null` check
+ * always evaluated true, which made the rehydrate flow consistently believe
+ * every active session had already ended and tear down localStorage.
+ *
  * Returns null if the record does not exist or fetch fails.
  */
 export async function getSession(id: string): Promise<{ id: string; endedAt: string | null; startedAt: string } | null> {
   try {
     const record = await pb.collection('study_sessions').getOne(id)
+    const rawEnded = record['endedAt'] as string | null | undefined
     return {
       id: record.id,
-      endedAt: (record['endedAt'] as string | null | undefined) ?? null,
+      endedAt: rawEnded && rawEnded !== '' ? rawEnded : null,
       startedAt: record['startedAt'] as string,
     }
   } catch {
