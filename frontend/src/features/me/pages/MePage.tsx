@@ -2,7 +2,7 @@
 // Shows avatar, displayName, friendCode, then nav cards for Stats/Profile/Settings.
 // F6: adds EnableNotificationsCTA + install app hint.
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart2, User, Settings, Download } from 'lucide-react'
+import { BarChart2, User, Settings, Download, BookOpen } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
@@ -29,6 +29,12 @@ const NAV_CARDS: NavCard[] = [
     icon: <BarChart2 size={22} />,
     label: 'Estadísticas',
     description: 'Racha, tiempo total y más',
+  },
+  {
+    to: '/subjects',
+    icon: <BookOpen size={22} />,
+    label: 'Materias',
+    description: 'Etiqueta tus sesiones de estudio',
   },
   {
     to: '/profile',

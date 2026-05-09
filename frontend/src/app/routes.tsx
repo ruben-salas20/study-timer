@@ -24,6 +24,7 @@ import { MePage } from '@/features/me/pages/MePage'
 import { StatsPage } from '@/features/stats/pages/StatsPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { SettingsPage } from '@/features/settings/pages/SettingsPage'
+import { SubjectsPage } from '@/features/subjects/pages/SubjectsPage'
 
 /**
  * RootRedirect — decides where "/" sends the user based on auth state.
@@ -199,6 +200,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <SettingsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/subjects"
+        element={
+          <RequireAuth>
+            <SubjectsPage />
           </RequireAuth>
         }
       />

@@ -8,6 +8,8 @@ export type TimerMode = 'pomodoro' | 'stopwatch' | 'countdown'
 export interface CreateSessionOptions {
   pomodoroConfig?: PomodoroConfig
   targetSec?: number
+  /** Optional subject id to tag the session with. */
+  subjectId?: string | null
 }
 
 /**
@@ -28,6 +30,7 @@ export async function createSession(
     durationSec: 0,
     pomodoroConfig: config?.pomodoroConfig ?? null,
     targetSec: config?.targetSec ?? null,
+    subject: config?.subjectId ?? null,
   })
   return record.id
 }

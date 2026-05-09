@@ -15,6 +15,8 @@ export interface StatsSession {
   durationSec: number
   endedAt: string
   mode: 'pomodoro' | 'stopwatch' | 'countdown'
+  /** Subject id, if the session was tagged. Empty/undefined means "no subject". */
+  subject?: string
 }
 
 export interface ModeBreakdown {
@@ -100,6 +102,21 @@ export function groupSessionsByMode(sessions: StatsSession[]): ModeBreakdown {
     result[session.mode] += session.durationSec
   }
 
+  return result
+}
+
+// ── groupSessionsBySubject ────────────────────────────────────────────────────
+
+/**
+ * groupSessionsBySubject — sums durationSec per subject id.
+ * Sessions without a subject accumulate under the empty-string key "".
+ */
+export function groupSessionsBySubject(sessions: StatsSession[]): Map<string, number> {
+  const result = new Map<string, number>()
+  for (const session of sessions) {
+    const key = session.subject || ''
+    result.set(key, (result.get(key) ?? 0) + session.durationSec)
+  }
   return result
 }
 

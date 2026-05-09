@@ -9,6 +9,7 @@ import pb from '@/shared/pb'
 import {
   groupSessionsByDay,
   groupSessionsByMode,
+  groupSessionsBySubject,
   computeStreakDays,
   computeBestDay,
   computeWeekTotal,
@@ -44,6 +45,7 @@ async function fetchLast90DaysSessions(): Promise<StatsSession[]> {
     endedAt: item.endedAt as string,
     durationSec: (item.durationSec as number) ?? 0,
     mode: (item.mode as StatsSession['mode']) ?? 'pomodoro',
+    subject: (item.subject as string | undefined) || undefined,
   }))
 }
 
@@ -88,6 +90,7 @@ export function useStats(tz = 'UTC') {
   const derived = useMemo(() => {
     const byDay = groupSessionsByDay(sessions, tz)
     const byMode = groupSessionsByMode(sessions)
+    const bySubject = groupSessionsBySubject(sessions)
     const streak = computeStreakDays(sessions, tz)
     const bestDay = computeBestDay(sessions, tz)
     const weekTotal = computeWeekTotal(sessions, tz)
@@ -119,6 +122,7 @@ export function useStats(tz = 'UTC') {
       allTimeSec: allTime,
       allTimeFmt: formatMinutes(allTime),
       byMode,
+      bySubject,
       byDay,
       streak,
       bestDay: { ...bestDay, fmt: bestDay.totalSec > 0 ? formatMinutes(bestDay.totalSec) : '—' },

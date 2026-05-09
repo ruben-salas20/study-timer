@@ -13,6 +13,7 @@ import { PomodoroConfigForm } from '../components/PomodoroConfigForm'
 import { CountdownConfigForm } from '../components/CountdownConfigForm'
 import { useStats } from '@/features/stats/hooks/useStats'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { SubjectPicker } from '@/features/subjects/components/SubjectPicker'
 import type { PomodoroConfig, CountdownConfig } from '../schemas'
 
 type ModeSelection = 'pomodoro' | 'stopwatch' | 'countdown' | null
@@ -26,6 +27,7 @@ export function HomeTimerPage() {
   const { todaySec, weekSec } = useStats(user?.timezone as string ?? 'UTC')
 
   const [selectedMode, setSelectedMode] = useState<ModeSelection>(null)
+  const [subjectId, setSubjectId] = useState<string | null>(null)
 
   const weeklyGoalSec = (user?.weeklyGoalMinutes ?? 600) * 60
   const weekProgressPercent = Math.min(100, Math.round((weekSec / weeklyGoalSec) * 100))
@@ -38,17 +40,17 @@ export function HomeTimerPage() {
   }
 
   async function handleStartStopwatch() {
-    await start('stopwatch')
+    await start('stopwatch', { subjectId })
     navigate('/timer/active')
   }
 
   async function handleStartPomodoro(config: PomodoroConfig) {
-    await start('pomodoro', { pomodoroConfig: config })
+    await start('pomodoro', { pomodoroConfig: config, subjectId })
     navigate('/timer/active')
   }
 
   async function handleStartCountdown(config: CountdownConfig) {
-    await start('countdown', { targetSec: config.targetMin * 60 })
+    await start('countdown', { targetSec: config.targetMin * 60, subjectId })
     navigate('/timer/active')
   }
 
@@ -107,6 +109,11 @@ export function HomeTimerPage() {
             </div>
           </div>
         </div>
+
+        {/* Subject selector — only visible while choosing mode */}
+        {selectedMode == null && (
+          <SubjectPicker value={subjectId} onChange={setSubjectId} />
+        )}
 
         {/* Mode selection */}
         {selectedMode == null && (

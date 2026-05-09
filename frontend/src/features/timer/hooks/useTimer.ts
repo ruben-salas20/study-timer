@@ -24,6 +24,8 @@ export interface StartOptions {
   targetSec?: number
   /** For pomodoro mode: work/break/cycle config */
   pomodoroConfig?: PomodoroConfig
+  /** Optional subject id to tag the session with */
+  subjectId?: string | null
 }
 
 export interface UseTimerOptions {
@@ -241,6 +243,7 @@ export function useTimer(options: UseTimerOptions = {}) {
       const sessionId = await createSession(mode, {
         pomodoroConfig: pomodoroConfig ?? undefined,
         targetSec: targetSec ?? undefined,
+        subjectId: opts.subjectId ?? null,
       })
 
       // Initialize store

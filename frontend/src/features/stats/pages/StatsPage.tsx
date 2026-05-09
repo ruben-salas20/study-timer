@@ -6,6 +6,7 @@ import { StreakHero } from '../components/StreakHero'
 import { MetricTile } from '../components/MetricTile'
 import { DayBarChart } from '../components/DayBarChart'
 import { ModeBreakdown } from '../components/ModeBreakdown'
+import { SubjectBreakdown } from '../components/SubjectBreakdown'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -81,6 +82,14 @@ export function StatsPage() {
                 Tiempo por modo
               </p>
               <ModeBreakdown byMode={stats.byMode} />
+            </section>
+
+            {/* ── Subject breakdown ────────────────────────────────────── */}
+            <section>
+              <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+                Tiempo por materia
+              </p>
+              <SubjectBreakdown bySubject={stats.bySubject} />
             </section>
           </>
         )}
