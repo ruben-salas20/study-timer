@@ -85,6 +85,28 @@ export function ActiveSessionPage() {
     prevPhase.current = pomodoroPhase
   }, [pomodoroPhase, mode])
 
+  // Intercept the device back button while the timer is running/paused so an
+  // accidental tap doesn't drop the user back at /home, which makes them think
+  // their elapsed time vanished. We push a sentinel history entry on mount;
+  // when the user presses back, popstate fires, we re-push the sentinel to
+  // keep them here, and surface the same stop-confirmation modal as the on-
+  // screen Stop button. They can Cancel (stay) or Confirm (save + exit).
+  useEffect(() => {
+    if (status !== 'running' && status !== 'paused') return
+
+    window.history.pushState({ studyTimerActiveSession: true }, '')
+
+    const onPopState = () => {
+      window.history.pushState({ studyTimerActiveSession: true }, '')
+      setShowConfirmStop(true)
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+    }
+  }, [status])
+
   // If there's no active session (e.g., direct URL access), go back
   if (status === 'idle') {
     navigate('/home', { replace: true })
