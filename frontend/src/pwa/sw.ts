@@ -131,7 +131,11 @@ self.addEventListener('push', (event) => {
   const options: NotificationOptions = {
     body: (data.body as string | undefined) ?? '',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
+    // Android masks the badge to a monochrome alpha silhouette. The full-
+    // colour icon ends up rendered as a solid white square because every
+    // pixel is opaque. Use a dedicated mostly-transparent badge so the cuy
+    // outline survives the mask.
+    badge: '/icons/notification-badge.png',
     tag: (data.tag as string | undefined) ?? 'study-timer',
     data: { url: (data.url as string | undefined) ?? '/' },
   }

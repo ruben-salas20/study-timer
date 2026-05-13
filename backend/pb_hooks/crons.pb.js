@@ -194,9 +194,10 @@ cronAdd("challenges-status-rollup", "*/1 * * * *", () => {
 });
 
 // study-plan-reminders — every minute, scan study_plans whose plannedAt is
-// inside [now+9min, now+11min] and have not been notified yet. Fire a push,
-// flip notified=true. The 2-minute window covers the ~1-minute cron jitter
-// while staying within the user's mental "10 minutes before" expectation.
+// inside [now+9min, now+10min] and have not been notified yet. Fire a push,
+// flip notified=true. The 1-minute window keeps the perceived delivery
+// close to the promised "10 minutes before" — wider windows (e.g. 9-11min)
+// could surface 11-min-early notifications that feel off.
 cronAdd("study-plan-reminders", "*/1 * * * *", () => {
   function dispatchPush(userId, payload) {
     try {
@@ -233,7 +234,7 @@ cronAdd("study-plan-reminders", "*/1 * * * *", () => {
   // internally (same fix as the challenge rollup above).
   const nowMs = Date.now();
   const windowStart = new Date(nowMs + 9 * 60 * 1000).toISOString().replace("T", " ");
-  const windowEnd = new Date(nowMs + 11 * 60 * 1000).toISOString().replace("T", " ");
+  const windowEnd = new Date(nowMs + 10 * 60 * 1000).toISOString().replace("T", " ");
 
   try {
     const dueSoon = $app.findRecordsByFilter(
