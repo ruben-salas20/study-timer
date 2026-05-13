@@ -12,6 +12,8 @@ import type { PasswordChangeInput } from '../schemas'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Avatar } from '@/features/avatar/components/Avatar'
 import { AvatarPickerModal } from '@/features/avatar/components/AvatarPickerModal'
+import { VisibilityModal } from '../components/VisibilityModal'
+import type { ProfileVisibility } from '../api/profile'
 
 // ── Password change modal ─────────────────────────────────────────────────────
 
@@ -180,6 +182,7 @@ export function ProfilePage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [showGoalModal, setShowGoalModal] = useState(false)
   const [showAvatarModal, setShowAvatarModal] = useState(false)
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const userId = (user?.id as string | undefined) ?? ''
@@ -319,6 +322,24 @@ export function ProfilePage() {
           </div>
         </section>
 
+        {/* ── Public profile visibility ─────────────────────────────── */}
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+            Perfil público
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowVisibilityModal(true)}
+            className="w-full flex items-center justify-between rounded-xl border border-current/20 px-4 py-3 text-sm"
+          >
+            <span className="flex flex-col items-start">
+              <span>Visibilidad</span>
+              <span className="text-xs opacity-50">Qué ven otros en tu /u/...</span>
+            </span>
+            <span className="opacity-40">→</span>
+          </button>
+        </section>
+
         {/* ── Security ──────────────────────────────────────────────── */}
         <section>
           <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
@@ -369,6 +390,15 @@ export function ProfilePage() {
           currentPreset={avatarPreset}
           displayName={displayName}
           onClose={() => setShowAvatarModal(false)}
+        />
+      )}
+      {showVisibilityModal && (
+        <VisibilityModal
+          initial={user?.profileVisibility as ProfileVisibility | undefined}
+          onClose={() => setShowVisibilityModal(false)}
+          onSaved={() => {
+            void queryClient.invalidateQueries({ queryKey: ['auth', 'currentUser'] })
+          }}
         />
       )}
 

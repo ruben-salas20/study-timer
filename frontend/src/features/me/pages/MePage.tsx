@@ -1,7 +1,7 @@
 // MePage.tsx — "Yo" hub screen at /me (and the BottomNav "Yo" tab entry)
 // Shows avatar, displayName, friendCode, then nav cards for Stats/Profile/Settings.
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart2, User, Settings, BookOpen, Mail, Newspaper } from 'lucide-react'
+import { BarChart2, User, Settings, BookOpen, Mail, Newspaper, Trophy } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
@@ -23,6 +23,12 @@ const NAV_CARDS: NavCard[] = [
     icon: <Newspaper size={22} />,
     label: 'Actividad',
     description: 'Lo que vos y tus amigos estudian',
+  },
+  {
+    to: '/achievements',
+    icon: <Trophy size={22} />,
+    label: 'Logros',
+    description: 'Tus desbloqueables',
   },
   {
     to: '/stats',

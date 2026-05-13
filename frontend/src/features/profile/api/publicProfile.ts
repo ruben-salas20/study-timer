@@ -3,6 +3,7 @@
 // per migration 012.
 import pb from '@/shared/pb'
 import type { StatsSession } from '@/features/stats/lib/aggregators'
+import type { ProfileVisibility } from './profile'
 
 export interface PublicUser {
   id: string
@@ -12,6 +13,7 @@ export interface PublicUser {
   avatarPreset?: string
   weeklyGoalMinutes?: number
   timezone?: string
+  profileVisibility?: ProfileVisibility
 }
 
 export interface SharedChallengeSummary {
@@ -34,6 +36,7 @@ export async function getUserById(userId: string): Promise<PublicUser> {
     avatarPreset: (record.avatarPreset as string | undefined) || undefined,
     weeklyGoalMinutes: (record.weeklyGoalMinutes as number | undefined) ?? undefined,
     timezone: (record.timezone as string | undefined) ?? undefined,
+    profileVisibility: (record.profileVisibility as ProfileVisibility | undefined) ?? undefined,
   }
 }
 

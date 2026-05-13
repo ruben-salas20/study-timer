@@ -23,7 +23,11 @@ import {
   findSharedChallenges,
   isFriendOf,
 } from '../api/publicProfile'
+import { resolveVisibility } from '../api/profile'
 import { useSendFriendRequest } from '@/features/friends/hooks/useFriends'
+import { useUserAchievements } from '@/features/achievements/hooks/useAchievements'
+import { AchievementCard } from '@/features/achievements/components/AchievementCard'
+import { ACHIEVEMENTS_BY_KEY, ACHIEVEMENTS_TOTAL } from '@/features/achievements/lib/registry'
 import { Avatar } from '@/features/avatar/components/Avatar'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
@@ -87,6 +91,21 @@ export function UserProfilePage() {
     queryFn: () => findSharedChallenges(myId as string, id as string),
     enabled: !!id && !!myId && !isMe,
   })
+
+  const achievementsQuery = useUserAchievements(id)
+
+  // Resolve the visibility config — strangers/friends respect the user's
+  // choices; the user themselves always sees everything in their own page.
+  const visibility = useMemo(() => {
+    const resolved = resolveVisibility(userQuery.data?.profileVisibility)
+    if (isMe) {
+      return {
+        stats: { streak: true, total: true, week: true, bestDay: true },
+        achievements: true,
+      }
+    }
+    return resolved
+  }, [userQuery.data?.profileVisibility, isMe])
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data ?? []
@@ -212,28 +231,74 @@ export function UserProfilePage() {
                 )}
                 {stats && (
                   <div className="grid grid-cols-2 gap-3">
-                    <StatTile
-                      icon={<Flame size={16} />}
-                      label="Racha"
-                      value={`${stats.streak} ${stats.streak === 1 ? 'día' : 'días'}`}
-                    />
-                    <StatTile
-                      icon={<Trophy size={16} />}
-                      label="Total"
-                      value={formatMinutes(stats.total)}
-                    />
-                    <StatTile
-                      icon={<Calendar size={16} />}
-                      label="Esta semana"
-                      value={formatMinutes(stats.week)}
-                    />
-                    <StatTile
-                      icon={<Star size={16} />}
-                      label="Mejor día"
-                      value={stats.best.totalSec > 0 ? formatMinutes(stats.best.totalSec) : '—'}
-                      sub={stats.best.date || undefined}
-                    />
+                    {visibility.stats.streak && (
+                      <StatTile
+                        icon={<Flame size={16} />}
+                        label="Racha"
+                        value={`${stats.streak} ${stats.streak === 1 ? 'día' : 'días'}`}
+                      />
+                    )}
+                    {visibility.stats.total && (
+                      <StatTile
+                        icon={<Trophy size={16} />}
+                        label="Total"
+                        value={formatMinutes(stats.total)}
+                      />
+                    )}
+                    {visibility.stats.week && (
+                      <StatTile
+                        icon={<Calendar size={16} />}
+                        label="Esta semana"
+                        value={formatMinutes(stats.week)}
+                      />
+                    )}
+                    {visibility.stats.bestDay && (
+                      <StatTile
+                        icon={<Star size={16} />}
+                        label="Mejor día"
+                        value={stats.best.totalSec > 0 ? formatMinutes(stats.best.totalSec) : '—'}
+                        sub={stats.best.date || undefined}
+                      />
+                    )}
                   </div>
+                )}
+              </section>
+            )}
+
+            {/* ── Achievements (visible to self or friends, respects visibility) ─ */}
+            {visibility.achievements && (isFriend || isMe) && (achievementsQuery.data?.length ?? 0) > 0 && (
+              <section className="flex flex-col gap-3">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-widest opacity-50">
+                    Logros desbloqueados
+                  </p>
+                  <span className="text-[11px] opacity-60 tabular-nums">
+                    {achievementsQuery.data?.length ?? 0}/{ACHIEVEMENTS_TOTAL}
+                  </span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1">
+                  {achievementsQuery.data?.map((u) => {
+                    const def = ACHIEVEMENTS_BY_KEY[u.key]
+                    if (!def) return null
+                    return (
+                      <AchievementCard
+                        key={u.id}
+                        def={def}
+                        unlocked
+                        unlockedAt={u.unlockedAt}
+                        compact
+                      />
+                    )
+                  })}
+                </div>
+                {isMe && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/achievements')}
+                    className="self-end text-xs text-(--color-primary) font-medium"
+                  >
+                    Ver todos →
+                  </button>
                 )}
               </section>
             )}

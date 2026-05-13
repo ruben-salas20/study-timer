@@ -19,6 +19,7 @@ import { SubjectDetailPage } from '@/features/subjects/pages/SubjectDetailPage'
 import { FeedPage } from '@/features/activity/pages/FeedPage'
 import { UserProfilePage } from '@/features/profile/pages/UserProfilePage'
 import { PlansPage } from '@/features/plans/pages/PlansPage'
+import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
@@ -253,6 +254,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <PlansPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/achievements"
+        element={
+          <RequireAuth>
+            <AchievementsPage />
           </RequireAuth>
         }
       />
