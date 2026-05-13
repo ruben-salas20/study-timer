@@ -229,7 +229,7 @@ export function useTimer(options: UseTimerOptions = {}) {
   // --- Public API ---
 
   const start = useCallback(
-    async (mode: TimerMode, opts: StartOptions = {}) => {
+    async (mode: TimerMode, opts: StartOptions = {}): Promise<string> => {
       clearTick()
 
       const pomodoroConfig = opts.pomodoroConfig ?? null
@@ -265,6 +265,7 @@ export function useTimer(options: UseTimerOptions = {}) {
 
       persistSession()
       startTick()
+      return sessionId
     },
     [clearTick, startTick, persistSession]
   )

@@ -18,6 +18,7 @@ import { SessionSummaryPage } from '@/features/timer/pages/SessionSummaryPage'
 import { SubjectDetailPage } from '@/features/subjects/pages/SubjectDetailPage'
 import { FeedPage } from '@/features/activity/pages/FeedPage'
 import { UserProfilePage } from '@/features/profile/pages/UserProfilePage'
+import { PlansPage } from '@/features/plans/pages/PlansPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
@@ -244,6 +245,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <UserProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/plan"
+        element={
+          <RequireAuth>
+            <PlansPage />
           </RequireAuth>
         }
       />

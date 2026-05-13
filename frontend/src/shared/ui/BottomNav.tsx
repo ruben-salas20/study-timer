@@ -1,9 +1,10 @@
 // BottomNav.tsx — Shared bottom navigation bar
-// 4 items: Inicio (/home), Amigos (/friends), Retos (/challenges), Yo (/me).
-// Active state is determined by the current route path.
-// The "Yo" tab activates for /me, /stats, /profile, and /settings.
+// 5 items: Inicio (/home), Plan (/plan), Amigos (/friends), Retos
+// (/challenges), Yo (/me). Active state is determined by the current route
+// path. The "Yo" tab activates for /me, /stats, /profile, /settings,
+// /subjects, /notes, /feed, /u/* — basically anything in the "me hub".
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Users, Trophy, User } from 'lucide-react'
+import { Home, CalendarClock, Users, Trophy, User } from 'lucide-react'
 
 interface NavItem {
   to: string
@@ -22,6 +23,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Inicio',
   },
   {
+    to: '/plan',
+    icon: <CalendarClock size={22} />,
+    label: 'Plan',
+    matchPrefix: true,
+  },
+  {
     to: '/friends',
     icon: <Users size={22} />,
     label: 'Amigos',
@@ -38,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <User size={22} />,
     label: 'Yo',
     matchPrefix: true,
-    alsoMatch: ['/stats', '/profile', '/settings'],
+    alsoMatch: ['/stats', '/profile', '/settings', '/subjects', '/feed', '/u/'],
   },
 ]
 

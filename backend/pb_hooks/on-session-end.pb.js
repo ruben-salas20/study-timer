@@ -38,6 +38,31 @@ onRecordUpdate((e) => {
   const userId = e.record.get("user");
   if (!userId) return;
 
+  // ── Close any study_plan linked to this session ─────────────────────────
+  // When the user tapped "Iniciar" on a planned block, the frontend stamped
+  // linkedSessionId on the plan. Once the session ends we flip the plan to
+  // `done` so the planner UI shows completion. Errors are isolated.
+  try {
+    const linkedPlans = e.app.findRecordsByFilter(
+      "study_plans",
+      'linkedSessionId = {:sid} && status = "upcoming"',
+      "",
+      5,
+      0,
+      { sid: e.record.id }
+    );
+    for (const plan of linkedPlans) {
+      plan.set("status", "done");
+      try {
+        e.app.save(plan);
+      } catch (saveErr) {
+        console.error(`[on-session-end] failed to mark plan ${plan.id} done:`, saveErr);
+      }
+    }
+  } catch (planErr) {
+    console.error("[on-session-end] plan close lookup failed:", planErr);
+  }
+
   // ── Emit activity feed event ────────────────────────────────────────────
   // Only "meaningful" sessions (>= 25 min) make it to the social feed so we
   // don't pollute friends' timelines with one-minute test sessions. Failures

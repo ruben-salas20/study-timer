@@ -192,3 +192,93 @@ cronAdd("challenges-status-rollup", "*/1 * * * *", () => {
     console.error("[crons] Error querying active challenges:", err);
   }
 });
+
+// study-plan-reminders — every minute, scan study_plans whose plannedAt is
+// inside [now+9min, now+11min] and have not been notified yet. Fire a push,
+// flip notified=true. The 2-minute window covers the ~1-minute cron jitter
+// while staying within the user's mental "10 minutes before" expectation.
+cronAdd("study-plan-reminders", "*/1 * * * *", () => {
+  function dispatchPush(userId, payload) {
+    try {
+      const pushServiceUrl = $os.getenv("PUSH_SERVICE_URL") || "http://push-service:3001";
+      const pushServiceToken = $os.getenv("PUSH_SERVICE_TOKEN") || "";
+      if (!pushServiceToken) return;
+      $http.send({
+        url: `${pushServiceUrl}/dispatch`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${pushServiceToken}`,
+        },
+        body: JSON.stringify({ userId, payload }),
+        timeout: 5,
+      });
+    } catch (err) {
+      console.error("[crons:plan-reminders] dispatchPush error:", err);
+    }
+  }
+
+  function formatTime(isoDate) {
+    try {
+      const d = new Date(isoDate);
+      const hh = String(d.getUTCHours()).padStart(2, "0");
+      const mm = String(d.getUTCMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    } catch (_) {
+      return "";
+    }
+  }
+
+  // Window math — both sides formatted with the space separator PB uses
+  // internally (same fix as the challenge rollup above).
+  const nowMs = Date.now();
+  const windowStart = new Date(nowMs + 9 * 60 * 1000).toISOString().replace("T", " ");
+  const windowEnd = new Date(nowMs + 11 * 60 * 1000).toISOString().replace("T", " ");
+
+  try {
+    const dueSoon = $app.findRecordsByFilter(
+      "study_plans",
+      'status = "upcoming" && notified != true && plannedAt >= {:start} && plannedAt <= {:end}',
+      "",
+      200,
+      0,
+      { start: windowStart, end: windowEnd }
+    );
+
+    for (const plan of dueSoon) {
+      const userId = plan.get("user");
+      if (!userId) continue;
+
+      // Resolve subject name for a nicer push body. Falls back gracefully
+      // when the plan has no subject set or the subject was deleted.
+      let subjectName = "";
+      const subjectId = plan.get("subject");
+      if (subjectId) {
+        try {
+          const subj = $app.findRecordById("subjects", subjectId);
+          subjectName = subj.get("name") || "";
+        } catch (_) { /* subject gone, ignore */ }
+      }
+
+      const durationMin = Number(plan.get("durationMin") ?? 0);
+      const startTime = formatTime(plan.get("plannedAt"));
+      const subjectPart = subjectName ? `${subjectName} · ` : "";
+
+      dispatchPush(userId, {
+        title: "Próxima sesión en 10 min",
+        body: `${subjectPart}${startTime} · ${durationMin} min`,
+        url: "/plan",
+        tag: `plan-${plan.id}`,
+      });
+
+      try {
+        plan.set("notified", true);
+        $app.save(plan);
+      } catch (err) {
+        console.error(`[crons:plan-reminders] failed to mark plan ${plan.id} notified:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[crons:plan-reminders] query error:", err);
+  }
+});
