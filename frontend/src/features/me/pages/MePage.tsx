@@ -1,7 +1,7 @@
 // MePage.tsx — "Yo" hub screen at /me (and the BottomNav "Yo" tab entry)
 // Shows avatar, displayName, friendCode, then nav cards for Stats/Profile/Settings.
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart2, User, Settings, BookOpen, Mail } from 'lucide-react'
+import { BarChart2, User, Settings, BookOpen, Mail, Newspaper } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { EnableNotificationsCTA } from '@/features/pwa/components/EnableNotificationsCTA'
@@ -19,6 +19,12 @@ interface NavCard {
 
 const NAV_CARDS: NavCard[] = [
   {
+    to: '/feed',
+    icon: <Newspaper size={22} />,
+    label: 'Actividad',
+    description: 'Lo que vos y tus amigos estudian',
+  },
+  {
     to: '/stats',
     icon: <BarChart2 size={22} />,
     label: 'Estadísticas',
@@ -27,8 +33,8 @@ const NAV_CARDS: NavCard[] = [
   {
     to: '/subjects',
     icon: <BookOpen size={22} />,
-    label: 'Materias',
-    description: 'Etiqueta tus sesiones de estudio',
+    label: 'Materias y notas',
+    description: 'Etiquetá tus sesiones y revisá tus apuntes',
   },
   {
     to: '/profile',

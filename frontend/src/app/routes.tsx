@@ -15,6 +15,8 @@ import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { HomeTimerPage } from '@/features/timer/pages/HomeTimerPage'
 import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
 import { SessionSummaryPage } from '@/features/timer/pages/SessionSummaryPage'
+import { SubjectDetailPage } from '@/features/subjects/pages/SubjectDetailPage'
+import { FeedPage } from '@/features/activity/pages/FeedPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
@@ -217,6 +219,22 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <SubjectsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/subjects/:id"
+        element={
+          <RequireAuth>
+            <SubjectDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/feed"
+        element={
+          <RequireAuth>
+            <FeedPage />
           </RequireAuth>
         }
       />

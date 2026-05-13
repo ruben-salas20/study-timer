@@ -38,6 +38,28 @@ onRecordUpdate((e) => {
   const userId = e.record.get("user");
   if (!userId) return;
 
+  // ── Emit activity feed event ────────────────────────────────────────────
+  // Only "meaningful" sessions (>= 25 min) make it to the social feed so we
+  // don't pollute friends' timelines with one-minute test sessions. Failures
+  // here are isolated from the challenge-progress logic below.
+  if (durationSec >= 1500) {
+    try {
+      const eventsCol = e.app.findCollectionByNameOrId("activity_events");
+      const ev = new Record(eventsCol);
+      ev.set("actor", userId);
+      ev.set("type", "session_completed");
+      ev.set("payload", {
+        durationSec: durationSec,
+        mode: e.record.get("mode"),
+        subject: e.record.get("subject") || null,
+        sessionId: e.record.id,
+      });
+      e.app.save(ev);
+    } catch (evErr) {
+      console.error("[on-session-end] activity event emit failed:", evErr);
+    }
+  }
+
   try {
     // Find all challenge_participants for this user
     const participants = e.app.findRecordsByFilter(

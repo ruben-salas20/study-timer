@@ -93,6 +93,36 @@ export async function getSessionSummary(id: string): Promise<SessionSummary | nu
 }
 
 /**
+ * listSessionsWithNotes — every completed session of the current user that
+ * has a non-empty note, newest first. Backs the /notes page.
+ *
+ * `notes != ""` is enforced server-side so we don't ship rows we'll drop
+ * anyway. Cap at 500 — past that the UX is paging territory, which we'll
+ * tackle if it actually becomes a real problem.
+ */
+export async function listSessionsWithNotes(limit = 500): Promise<SessionSummary[]> {
+  const user = pb.authStore.model
+  if (!user?.id) return []
+  const result = await pb.collection('study_sessions').getList(1, limit, {
+    filter: `user = "${user.id}" && endedAt != "" && notes != ""`,
+    sort: '-startedAt',
+    requestKey: 'sessions-with-notes',
+  })
+  return result.items.map((item) => {
+    const rawEnded = item['endedAt'] as string | null | undefined
+    return {
+      id: item.id,
+      mode: item['mode'] as TimerMode,
+      startedAt: item['startedAt'] as string,
+      endedAt: rawEnded && rawEnded !== '' ? rawEnded : null,
+      durationSec: (item['durationSec'] as number) ?? 0,
+      notes: (item['notes'] as string | undefined) ?? '',
+      subjectId: (item['subject'] as string | undefined) || null,
+    }
+  })
+}
+
+/**
  * listRecentSessions — last N completed sessions for the current user,
  * ordered by start time descending. Used by /stats "Sesiones recientes".
  */

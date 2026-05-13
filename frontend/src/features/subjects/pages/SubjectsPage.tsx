@@ -1,7 +1,11 @@
-// SubjectsPage.tsx — manage user's subjects (create / edit / delete).
-import { useState } from 'react'
+// SubjectsPage.tsx — manage user's subjects + entry-point to per-subject notes.
+// Tap a row body → /subjects/:id (notes for that subject). Edit/delete icons
+// on the right preserve CRUD. A "Sin materia" pseudo-row at the bottom surfaces
+// notes that were never tagged.
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ChevronLeft, Plus, Pencil, Trash2, StickyNote, ChevronRight } from 'lucide-react'
 import {
   useCreateSubject,
   useDeleteSubject,
@@ -11,6 +15,7 @@ import {
 import { SubjectFormModal } from '../components/SubjectFormModal'
 import type { SubjectRecord } from '../api/subjects'
 import { BottomNav } from '@/shared/ui/BottomNav'
+import { listSessionsWithNotes } from '@/features/timer/api/sessions'
 
 type Modal =
   | { kind: 'closed' }
@@ -25,6 +30,25 @@ export function SubjectsPage() {
   const updateMut = useUpdateSubject()
   const deleteMut = useDeleteSubject()
   const [modal, setModal] = useState<Modal>({ kind: 'closed' })
+
+  const { data: notesSessions } = useQuery({
+    queryKey: ['notes', 'list'],
+    queryFn: () => listSessionsWithNotes(),
+    staleTime: 60_000,
+  })
+
+  const { countsBySubject, noneCount } = useMemo(() => {
+    const counts = new Map<string, number>()
+    let none = 0
+    for (const n of notesSessions ?? []) {
+      if (!n.subjectId) {
+        none++
+      } else {
+        counts.set(n.subjectId, (counts.get(n.subjectId) ?? 0) + 1)
+      }
+    }
+    return { countsBySubject: counts, noneCount: none }
+  }, [notesSessions])
 
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
@@ -68,42 +92,81 @@ export function SubjectsPage() {
             </button>
           </div>
         ) : (
-          subjects.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-            >
-              <div
-                className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 text-lg"
-                style={{
-                  background: `color-mix(in oklch, ${s.color} 22%, transparent)`,
-                  color: s.color,
-                }}
-              >
-                {s.emoji || s.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-sm font-medium truncate">{s.name}</span>
-                <span className="text-[11px] opacity-40 tabular-nums">{s.color}</span>
-              </div>
+          <>
+            {subjects.map((s) => {
+              const noteCount = countsBySubject.get(s.id) ?? 0
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/subjects/${s.id}`)}
+                    className="flex items-center gap-3 flex-1 min-w-0 px-2 py-1 rounded-lg hover:bg-white/5 text-left"
+                    aria-label={`Abrir notas de ${s.name}`}
+                  >
+                    <div
+                      className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 text-lg"
+                      style={{
+                        background: `color-mix(in oklch, ${s.color} 22%, transparent)`,
+                        color: s.color,
+                      }}
+                    >
+                      {s.emoji || s.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate">{s.name}</span>
+                      <span className="text-[11px] opacity-50 inline-flex items-center gap-1">
+                        <StickyNote size={11} />
+                        {noteCount === 0 ? 'Sin notas' : `${noteCount} nota${noteCount === 1 ? '' : 's'}`}
+                      </span>
+                    </div>
+                    <ChevronRight size={16} className="opacity-40 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModal({ kind: 'edit', subject: s })}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/10 opacity-70"
+                    aria-label={`Editar ${s.name}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModal({ kind: 'delete', subject: s })}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-500/10 text-red-400 opacity-70"
+                    aria-label={`Eliminar ${s.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )
+            })}
+
+            {/* "Sin materia" pseudo-row — surfaces orphan notes so they don't
+                disappear from the new merged Materias+Notas flow. Only shown
+                when the user actually has untagged notes. */}
+            {noneCount > 0 && (
               <button
                 type="button"
-                onClick={() => setModal({ kind: 'edit', subject: s })}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/10 opacity-70"
-                aria-label={`Editar ${s.name}`}
+                onClick={() => navigate('/subjects/none')}
+                className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 bg-transparent px-4 py-3 text-left hover:border-white/30 transition-colors"
+                aria-label="Ver notas sin materia"
               >
-                <Pencil size={14} />
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 text-lg opacity-60">
+                  <StickyNote size={18} />
+                </div>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-sm font-medium truncate">Sin materia</span>
+                  <span className="text-[11px] opacity-50">
+                    {noneCount} nota{noneCount === 1 ? '' : 's'} sin etiquetar
+                  </span>
+                </div>
+                <ChevronRight size={16} className="opacity-40 shrink-0" />
               </button>
-              <button
-                type="button"
-                onClick={() => setModal({ kind: 'delete', subject: s })}
-                className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-500/10 text-red-400 opacity-70"
-                aria-label={`Eliminar ${s.name}`}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))
+            )}
+          </>
         )}
       </main>
 

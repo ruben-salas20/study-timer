@@ -121,6 +121,69 @@ cronAdd("challenges-status-rollup", "*/1 * * * *", () => {
           url: `/challenges/${challenge.id}`,
           tag: `challenge-completed-${challenge.id}`,
         });
+
+        // ── Activity feed: emit challenge_won for the winner ──────────────
+        // Race / duel / weekly_goal: winner = participant with the highest
+        // progressSec. group_streak: emit per participant whose streakDays
+        // reached the target so every contributor shows up. Tie-breaking by
+        // first record is fine — feed is informational, not authoritative.
+        try {
+          const eventsCol = $app.findCollectionByNameOrId("activity_events");
+          const challengeType = challenge.get("type");
+          const challengeTitle = challenge.get("title") || "sin título";
+          const allParts = $app.findRecordsByFilter(
+            "challenge_participants",
+            "challenge = {:c}",
+            "",
+            50,
+            0,
+            { c: challenge.id }
+          );
+
+          if (challengeType === "group_streak") {
+            const target = Number(challenge.get("targetDays") ?? 0);
+            for (const p of allParts) {
+              const days = Number(p.get("streakDays") ?? 0);
+              if (target > 0 && days >= target) {
+                const ev = new Record(eventsCol);
+                ev.set("actor", p.get("user"));
+                ev.set("type", "challenge_won");
+                ev.set("payload", {
+                  challengeId: challenge.id,
+                  challengeTitle: challengeTitle,
+                  challengeType: challengeType,
+                  streakDays: days,
+                });
+                $app.save(ev);
+              }
+            }
+          } else {
+            // race / duel / weekly_goal: pick highest progressSec
+            let winner = null;
+            let bestSec = -1;
+            for (const p of allParts) {
+              const sec = Number(p.get("progressSec") ?? 0);
+              if (sec > bestSec) {
+                bestSec = sec;
+                winner = p;
+              }
+            }
+            if (winner && bestSec > 0) {
+              const ev = new Record(eventsCol);
+              ev.set("actor", winner.get("user"));
+              ev.set("type", "challenge_won");
+              ev.set("payload", {
+                challengeId: challenge.id,
+                challengeTitle: challengeTitle,
+                challengeType: challengeType,
+                progressSec: bestSec,
+              });
+              $app.save(ev);
+            }
+          }
+        } catch (evErr) {
+          console.error(`[crons] activity event emit failed for challenge ${challenge.id}:`, evErr);
+        }
       } catch (err) {
         console.error(`[crons] Failed to complete challenge ${challenge.id}:`, err);
       }
