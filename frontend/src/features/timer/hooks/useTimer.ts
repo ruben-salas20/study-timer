@@ -305,11 +305,28 @@ export function useTimer(options: UseTimerOptions = {}) {
     clearTick()
 
     const sessionId = state.sessionId
-    const elapsedSec = state.elapsedSec
+
+    // Effective duration depends on mode:
+    // - stopwatch / countdown: state.elapsedSec is wall-clock minus pauses → use directly.
+    // - pomodoro: state.elapsedSec resets on every phase transition, so it
+    //   only ever reflects the CURRENT phase. We have to add the time
+    //   already accumulated by completed cycles + the work phase of the
+    //   current cycle (if we're now in break). Otherwise a 2-cycle run of
+    //   5/1 stored only the final 1-min break.
+    let elapsedSec = state.elapsedSec
+    if (state.mode === 'pomodoro' && state.pomodoroConfig) {
+      const cfg = state.pomodoroConfig
+      const completedCycles = Math.max(0, state.currentCycle - 1)
+      const cycleSec = (cfg.workMin + cfg.breakMin) * 60
+      let total = completedCycles * cycleSec
+      if (state.pomodoroPhase === 'break') {
+        total += cfg.workMin * 60
+      }
+      total += state.elapsedSec
+      elapsedSec = total
+    }
 
     if (sessionId) {
-      // Compute effective duration — for pomodoro, use elapsedSec counter
-      // For stopwatch/countdown, use elapsedSec which is wall-clock minus pauses
       await endSession(sessionId, elapsedSec)
     }
 
