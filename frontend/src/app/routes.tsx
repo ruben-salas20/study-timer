@@ -17,6 +17,7 @@ import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
 import { SessionSummaryPage } from '@/features/timer/pages/SessionSummaryPage'
 import { SubjectDetailPage } from '@/features/subjects/pages/SubjectDetailPage'
 import { FeedPage } from '@/features/activity/pages/FeedPage'
+import { UserProfilePage } from '@/features/profile/pages/UserProfilePage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
@@ -235,6 +236,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <FeedPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/u/:id"
+        element={
+          <RequireAuth>
+            <UserProfilePage />
           </RequireAuth>
         }
       />

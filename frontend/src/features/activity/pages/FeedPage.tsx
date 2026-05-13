@@ -11,6 +11,11 @@ import {
   type SessionCompletedPayload,
   type ChallengeWonPayload,
 } from '../api/feed'
+import {
+  listReactionsForEvents,
+  type EventReactionSummary,
+} from '../api/reactions'
+import { ReactionsBar } from '../components/ReactionsBar'
 import { useFriendsList } from '@/features/friends/hooks/useFriends'
 import { useSubjects } from '@/features/subjects/hooks/useSubjects'
 import { Avatar } from '@/features/avatar/components/Avatar'
@@ -72,11 +77,20 @@ export function FeedPage() {
     staleTime: 30_000,
   })
 
-  // We page by replacing the page rather than appending — react-query keeps
-  // each page cached separately. For a more "infinite scroll" feel later we
-  // can swap to useInfiniteQuery.
   const events = feedQuery.data?.events ?? []
   const hasMore = (feedQuery.data?.totalPages ?? 1) > page
+
+  // Reactions for the visible events. Refetches when the event set changes
+  // (new page, new realtime data). Each ReactionsBar holds its own optimistic
+  // local copy of the summary, so quick taps don't await a roundtrip.
+  const eventIdsKey = events.map((ev) => ev.id).join(',')
+  const reactionsQuery = useQuery({
+    queryKey: ['feed', 'reactions', eventIdsKey],
+    queryFn: () => listReactionsForEvents(events.map((ev) => ev.id)),
+    enabled: events.length > 0,
+    staleTime: 30_000,
+  })
+  const reactionsMap = reactionsQuery.data ?? new Map<string, EventReactionSummary>()
 
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
@@ -121,6 +135,7 @@ export function FeedPage() {
                   event={ev}
                   subjects={subjectsQuery.data ?? []}
                   isMe={ev.actor.id === myId}
+                  reactions={reactionsMap.get(ev.id) ?? { counts: {}, myReactionIds: {} }}
                   onNavigate={(to) => navigate(to)}
                 />
               </li>
@@ -167,74 +182,53 @@ interface FeedRowProps {
   event: ActivityEvent
   subjects: SubjectLite[]
   isMe: boolean
+  reactions: EventReactionSummary
   onNavigate: (to: string) => void
 }
 
-function FeedRow({ event, subjects, isMe, onNavigate }: FeedRowProps) {
+function FeedRow({ event, subjects, isMe, reactions, onNavigate }: FeedRowProps) {
   const actorName = isMe ? 'Vos' : event.actor.displayName
+
+  // Body-tap target depends on event type. Avatar always navigates to profile.
+  let bodyHref = '#'
+  let bodyDisabled = false
+  let bodyContent: React.ReactNode = null
 
   if (event.type === 'session_completed') {
     const p = event.payload as SessionCompletedPayload
     const subject = p.subject ? subjects.find((s) => s.id === p.subject) : null
-    return (
-      <button
-        type="button"
-        onClick={() => onNavigate(`/timer/summary/${p.sessionId}`)}
-        disabled={!isMe}
-        className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-current/15"
-      >
-        <Avatar
-          userId={event.actor.id}
-          avatar={event.actor.avatar}
-          avatarPreset={event.actor.avatarPreset}
-          displayName={event.actor.displayName}
-          className="w-10 h-10 shrink-0"
-          textClassName="text-sm"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm">
-            <span className="font-semibold">{actorName}</span>{' '}
-            terminó una sesión de{' '}
-            <span className="font-semibold tabular-nums">{formatDuration(p.durationSec)}</span>
-          </p>
-          <div className="flex items-center gap-2 mt-0.5 text-xs opacity-60 flex-wrap">
-            <span className="inline-flex items-center gap-1">
-              {modeIcon(p.mode)}
-              {p.mode === 'pomodoro' ? 'Pomodoro' : p.mode === 'countdown' ? 'Regresiva' : 'Cronómetro'}
+    bodyHref = `/timer/summary/${p.sessionId}`
+    bodyDisabled = !isMe
+    bodyContent = (
+      <>
+        <p className="text-sm">
+          <span className="font-semibold">{actorName}</span>{' '}
+          terminó una sesión de{' '}
+          <span className="font-semibold tabular-nums">{formatDuration(p.durationSec)}</span>
+        </p>
+        <div className="flex items-center gap-2 mt-0.5 text-xs opacity-60 flex-wrap">
+          <span className="inline-flex items-center gap-1">
+            {modeIcon(p.mode)}
+            {p.mode === 'pomodoro' ? 'Pomodoro' : p.mode === 'countdown' ? 'Regresiva' : 'Cronómetro'}
+          </span>
+          {subject && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+              style={{ background: `${subject.color}22`, color: subject.color }}
+            >
+              {subject.emoji && <span>{subject.emoji}</span>}
+              {subject.name}
             </span>
-            {subject && (
-              <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
-                style={{ background: `${subject.color}22`, color: subject.color }}
-              >
-                {subject.emoji && <span>{subject.emoji}</span>}
-                {subject.name}
-              </span>
-            )}
-            <span className="ml-auto">{relativeTime(event.created)}</span>
-          </div>
+          )}
+          <span className="ml-auto">{relativeTime(event.created)}</span>
         </div>
-      </button>
+      </>
     )
-  }
-
-  // challenge_won
-  const p = event.payload as ChallengeWonPayload
-  return (
-    <button
-      type="button"
-      onClick={() => onNavigate(`/challenges/${p.challengeId}`)}
-      className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-current/15"
-    >
-      <Avatar
-        userId={event.actor.id}
-        avatar={event.actor.avatar}
-        avatarPreset={event.actor.avatarPreset}
-        displayName={event.actor.displayName}
-        className="w-10 h-10 shrink-0"
-        textClassName="text-sm"
-      />
-      <div className="flex-1 min-w-0">
+  } else {
+    const p = event.payload as ChallengeWonPayload
+    bodyHref = `/challenges/${p.challengeId}`
+    bodyContent = (
+      <>
         <p className="text-sm">
           <span className="font-semibold">{actorName}</span>{' '}
           ganó el reto{' '}
@@ -257,7 +251,40 @@ function FeedRow({ event, subjects, isMe, onNavigate }: FeedRowProps) {
           )}
           <span className="ml-auto">{relativeTime(event.created)}</span>
         </div>
+      </>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2 p-3 rounded-xl border border-current/15">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onNavigate(`/u/${event.actor.id}`)}
+          aria-label={`Ver perfil de ${event.actor.displayName}`}
+          className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-(--color-primary)/60"
+        >
+          <Avatar
+            userId={event.actor.id}
+            avatar={event.actor.avatar}
+            avatarPreset={event.actor.avatarPreset}
+            displayName={event.actor.displayName}
+            className="w-10 h-10"
+            textClassName="text-sm"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate(bodyHref)}
+          disabled={bodyDisabled}
+          className="flex-1 min-w-0 text-left"
+        >
+          {bodyContent}
+        </button>
       </div>
-    </button>
+      <div className="pl-13">
+        <ReactionsBar eventId={event.id} initial={reactions} />
+      </div>
+    </div>
   )
 }

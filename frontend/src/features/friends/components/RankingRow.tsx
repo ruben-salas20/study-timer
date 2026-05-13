@@ -1,4 +1,6 @@
-// RankingRow.tsx — A single row in the weekly ranking list
+// RankingRow.tsx — A single row in the weekly ranking list.
+// Tap a row → /u/:id (own profile if isMe, friend's otherwise).
+import { useNavigate } from 'react-router-dom'
 import type { RankingEntry } from '../hooks/useWeeklyRanking'
 import { Avatar } from '@/features/avatar/components/Avatar'
 
@@ -15,16 +17,20 @@ function formatMinutes(totalSec: number): string {
 }
 
 export function RankingRow({ entry, rank }: RankingRowProps) {
+  const navigate = useNavigate()
   const isFirst = rank === 1
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => navigate(`/u/${entry.userId}`)}
       className={[
-        'flex items-center gap-3 rounded-xl px-4 py-3',
+        'w-full text-left flex items-center gap-3 rounded-xl px-4 py-3',
         entry.isMe
           ? 'bg-(--color-primary)/15 border border-(--color-primary)/30'
           : 'bg-(--color-surface-raised)',
       ].join(' ')}
+      aria-label={`Ver perfil de ${entry.displayName}`}
     >
       {/* Rank badge */}
       <span
@@ -59,6 +65,6 @@ export function RankingRow({ entry, rank }: RankingRowProps) {
       <span className="flex-shrink-0 font-bold text-sm tabular-nums">
         {formatMinutes(entry.totalSec)}
       </span>
-    </div>
+    </button>
   )
 }

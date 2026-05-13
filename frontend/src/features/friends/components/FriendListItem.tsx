@@ -1,5 +1,7 @@
-// FriendListItem.tsx — A single item in the accepted friends list
-// Shows avatar, displayName, friendCode, and a remove button.
+// FriendListItem.tsx — A single item in the accepted friends list.
+// Tap on the row body → /u/:id (public profile). The "Eliminar" button on
+// the right stops propagation so it doesn't navigate.
+import { useNavigate } from 'react-router-dom'
 import type { FriendshipEntry } from '../api/friends'
 import { Avatar } from '@/features/avatar/components/Avatar'
 
@@ -10,7 +12,10 @@ interface FriendListItemProps {
 }
 
 export function FriendListItem({ entry, onRemove, isRemoving }: FriendListItemProps) {
-  function handleRemove() {
+  const navigate = useNavigate()
+
+  function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation()
     const confirmed = window.confirm(
       `¿Eliminar a ${entry.user.displayName} de tus amigos?`
     )
@@ -20,22 +25,26 @@ export function FriendListItem({ entry, onRemove, isRemoving }: FriendListItemPr
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-(--color-surface-raised) px-4 py-3">
-      <Avatar
-        userId={entry.user.id}
-        avatar={entry.user.avatar}
-        avatarPreset={entry.user.avatarPreset}
-        displayName={entry.user.displayName}
-        className="flex-shrink-0 w-10 h-10"
-      />
+    <div className="flex items-center gap-2 rounded-xl bg-(--color-surface-raised) pr-2">
+      <button
+        type="button"
+        onClick={() => navigate(`/u/${entry.user.id}`)}
+        className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3 text-left"
+        aria-label={`Ver perfil de ${entry.user.displayName}`}
+      >
+        <Avatar
+          userId={entry.user.id}
+          avatar={entry.user.avatar}
+          avatarPreset={entry.user.avatarPreset}
+          displayName={entry.user.displayName}
+          className="flex-shrink-0 w-10 h-10"
+        />
+        <div className="flex flex-col flex-1 min-w-0">
+          <span className="font-semibold text-sm truncate">{entry.user.displayName}</span>
+          <span className="text-[10px] font-mono opacity-50">{entry.user.friendCode}</span>
+        </div>
+      </button>
 
-      {/* Info */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="font-semibold text-sm truncate">{entry.user.displayName}</span>
-        <span className="text-[10px] font-mono opacity-50">{entry.user.friendCode}</span>
-      </div>
-
-      {/* Remove button */}
       <button
         type="button"
         onClick={handleRemove}
