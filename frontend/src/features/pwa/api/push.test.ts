@@ -54,6 +54,8 @@ describe('savePushSubscription', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreate.mockResolvedValue({ id: 'rec-1' })
+    // Default behaviour: no existing subscription → create path.
+    mockGetFirstListItem.mockRejectedValue(new Error('Not found'))
     // stub navigator.userAgent
     Object.defineProperty(navigator, 'userAgent', {
       value: 'TestBrowser/1.0',
@@ -86,6 +88,16 @@ describe('savePushSubscription', () => {
     expect(typeof payload.userAgent).toBe('string')
     // Must not exceed 500 chars
     expect((payload.userAgent as string).length).toBeLessThanOrEqual(500)
+  })
+
+  it('is idempotent — skips create when the (user, endpoint) row already exists', async () => {
+    mockGetFirstListItem.mockResolvedValue({ id: 'existing-rec' })
+    const sub = buildFakeSub('https://push.example.com/already-saved')
+
+    const result = await savePushSubscription(sub)
+
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect((result as { id: string }).id).toBe('existing-rec')
   })
 })
 

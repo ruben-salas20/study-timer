@@ -10,6 +10,7 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import pb from '@/shared/pb'
 import { InstallPrompt } from '@/features/pwa/components/InstallPrompt'
+import { reconcilePushSubscription } from '@/features/pwa/api/push'
 
 /**
  * AuthRefreshEffect — extends the PocketBase auth token on app boot and
@@ -135,6 +136,37 @@ function ThemeEffect() {
   return null
 }
 
+/**
+ * PushReconcileEffect — boot-time self-heal for push subscriptions.
+ *
+ * Background: the previous flow could leave a user in a limbo state where
+ * `Notification.permission === 'granted'` was true (so the "Activar
+ * notificaciones" CTA was hidden) but the push_subscriptions row in PB was
+ * missing — usually because `savePushSubscription` errored silently after the
+ * permission grant. Every server-side dispatch for that user then returned
+ * `sent=0 (no subscriptions)` and no notification ever arrived.
+ *
+ * This effect runs once per mount and on every authStore change. If the user
+ * is authenticated, browser permission is granted, and a PushSubscription is
+ * available (or can be created from the existing permission), it upserts it
+ * into push_subscriptions idempotently.
+ */
+function PushReconcileEffect() {
+  useEffect(() => {
+    function run() {
+      // Defer slightly so AuthRefreshEffect has a chance to refresh the token
+      // first. reconcilePushSubscription is a no-op when auth is invalid.
+      setTimeout(() => {
+        void reconcilePushSubscription()
+      }, 800)
+    }
+    run()
+    const unsubscribe = pb.authStore.onChange(() => run())
+    return () => unsubscribe()
+  }, [])
+  return null
+}
+
 interface ProvidersProps {
   children: ReactNode
 }
@@ -145,6 +177,7 @@ export function Providers({ children }: ProvidersProps) {
       <BrowserRouter>
         <ThemeEffect />
         <AuthRefreshEffect />
+        <PushReconcileEffect />
         {/* InstallPrompt renders a fixed banner when the app is installable */}
         <InstallPrompt />
         {children}
