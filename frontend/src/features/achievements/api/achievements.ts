@@ -7,6 +7,27 @@ export interface UnlockedAchievement {
   unlockedAt: string
 }
 
+/**
+ * grantAchievement — admin-only: create an unlock row for another user.
+ * The collection's createRule requires @request.auth.isAdmin = true, so a
+ * non-admin call returns 403. Catches the unique-constraint error so the
+ * UI can stay idempotent when re-clicking.
+ */
+export async function grantAchievement(userId: string, key: string): Promise<void> {
+  try {
+    await pb.collection('achievements_unlocked').create({
+      user: userId,
+      key,
+      unlockedAt: new Date().toISOString(),
+    })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    // Already unlocked (unique idx) — treat as success.
+    if (status === 400) return
+    throw err
+  }
+}
+
 function mapRecord(r: Record<string, unknown>): UnlockedAchievement {
   return {
     id: r.id as string,

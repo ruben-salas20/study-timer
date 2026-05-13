@@ -44,6 +44,8 @@ const ACHIEVEMENT_NAMES = {
   "cumplidor": "Cumplidor",
   "madrugador": "Madrugador",
   "renacido": "Renacido",
+  // Special: granted by an admin, not auto-detected.
+  "founder": "Founder",
 };
 
 // ── Push helper (inlined; goja scope is file-local) ────────────────────────

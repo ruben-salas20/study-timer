@@ -1,18 +1,23 @@
 // AchievementsPage.tsx — full grid of the 25 achievements for the current
 // user. Locked items render grayed; unlocked ones tint with their tier
 // colour. Reachable from /me → Logros.
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Gem } from 'lucide-react'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useMyAchievements } from '../hooks/useAchievements'
 import { ACHIEVEMENTS, ACHIEVEMENTS_TOTAL } from '../lib/registry'
 import { AchievementCard } from '../components/AchievementCard'
+import { GrantFounderModal } from '../components/GrantFounderModal'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
 export function AchievementsPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isAdmin = (user?.isAdmin as boolean | undefined) === true
   const { data: unlocked = [], isLoading } = useMyAchievements()
+  const [showGrantModal, setShowGrantModal] = useState(false)
 
   const unlockedMap = useMemo(() => {
     const m = new Map<string, string>()
@@ -60,7 +65,22 @@ export function AchievementsPage() {
             ))}
           </div>
         )}
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowGrantModal(true)}
+            className="self-center inline-flex items-center gap-2 px-4 py-2 mt-2 rounded-xl text-white text-sm font-semibold"
+            style={{ background: '#ff5499' }}
+          >
+            <Gem size={14} /> Otorgar Founder a un amigo
+          </button>
+        )}
       </main>
+
+      {showGrantModal && (
+        <GrantFounderModal onClose={() => setShowGrantModal(false)} />
+      )}
 
       <BottomNav />
     </div>

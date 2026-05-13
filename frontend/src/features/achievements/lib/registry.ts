@@ -30,10 +30,11 @@ import {
   CalendarCheck,
   Sunrise,
   Sprout,
+  Gem,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-export type AchievementTier = 'common' | 'rare' | 'epic' | 'legendary'
+export type AchievementTier = 'common' | 'rare' | 'epic' | 'legendary' | 'founder'
 
 export interface AchievementDef {
   key: string
@@ -49,6 +50,7 @@ export const TIER_STYLE: Record<AchievementTier, { color: string; label: string 
   rare:      { color: '#b9bfc4', label: 'Plata' },
   epic:      { color: '#e6c34a', label: 'Oro' },
   legendary: { color: '#9b6dff', label: 'Diamante' },
+  founder:   { color: '#ff5499', label: 'Founder' },
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -98,6 +100,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
 
   // Especiales
   { key: 'renacido',        name: 'Renacido',        description: 'Volviste después de 30 días sin estudiar', icon: Sprout, tier: 'rare' },
+
+  // ── Founder — concedido manualmente por el admin ───────────────────
+  // No se desbloquea por trigger. Solo el admin lo otorga desde /achievements.
+  { key: 'founder',         name: 'Founder',         description: 'Recibiste este logro de la mano del fundador', icon: Gem, tier: 'founder' },
 ]
 
 /** Map by key for O(1) lookup when rendering an unlocked row. */
