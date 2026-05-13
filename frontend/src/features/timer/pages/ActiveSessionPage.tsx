@@ -62,7 +62,7 @@ function ConfirmStopModal({
 
 export function ActiveSessionPage() {
   const navigate = useNavigate()
-  const { status, mode, elapsedSec, remainingSec, currentCycle, pomodoroPhase, isPaused, pause, resume, stop } =
+  const { status, mode, elapsedSec, remainingSec, currentCycle, pomodoroPhase, isPaused, sessionId, pause, resume, stop } =
     useTimer()
 
   const [showConfirmStop, setShowConfirmStop] = useState(false)
@@ -129,8 +129,15 @@ export function ActiveSessionPage() {
         : 'Cronómetro'
 
   async function handleStop() {
+    // Capture the id before stop() clears the store — we need it for the
+    // summary screen that shows duration + optional notes input.
+    const id = sessionId
     await stop()
-    navigate('/home')
+    if (id) {
+      navigate(`/timer/summary/${id}`, { state: { justEnded: true } })
+    } else {
+      navigate('/home')
+    }
   }
 
   return (

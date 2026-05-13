@@ -37,12 +37,84 @@ export async function createSession(
 
 /**
  * endSession — PATCH the session record with endedAt and durationSec.
- * Called when the user stops the timer.
+ * Called when the user stops the timer. Notes are written separately via
+ * `updateSessionNotes` from the session-summary screen so the stop flow stays
+ * fast even when the network is slow.
  */
 export async function endSession(id: string, durationSec: number): Promise<void> {
   await pb.collection('study_sessions').update(id, {
     endedAt: new Date().toISOString(),
     durationSec,
+  })
+}
+
+/**
+ * updateSessionNotes — PATCH only the `notes` field of a session.
+ * Used by the post-stop summary screen and by editing notes from /stats.
+ */
+export async function updateSessionNotes(id: string, notes: string): Promise<void> {
+  await pb.collection('study_sessions').update(id, {
+    notes: notes.slice(0, 500),
+  })
+}
+
+export interface SessionSummary {
+  id: string
+  mode: TimerMode
+  startedAt: string
+  endedAt: string | null
+  durationSec: number
+  notes: string
+  subjectId: string | null
+}
+
+/**
+ * getSessionSummary — fetch a single session for the summary/edit screen.
+ * Returns null if not found or the user can't access it.
+ */
+export async function getSessionSummary(id: string): Promise<SessionSummary | null> {
+  try {
+    const record = await pb.collection('study_sessions').getOne(id, {
+      requestKey: `session-summary-${id}`,
+    })
+    const rawEnded = record['endedAt'] as string | null | undefined
+    return {
+      id: record.id,
+      mode: record['mode'] as TimerMode,
+      startedAt: record['startedAt'] as string,
+      endedAt: rawEnded && rawEnded !== '' ? rawEnded : null,
+      durationSec: (record['durationSec'] as number) ?? 0,
+      notes: (record['notes'] as string | undefined) ?? '',
+      subjectId: (record['subject'] as string | undefined) || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * listRecentSessions — last N completed sessions for the current user,
+ * ordered by start time descending. Used by /stats "Sesiones recientes".
+ */
+export async function listRecentSessions(limit = 10): Promise<SessionSummary[]> {
+  const user = pb.authStore.model
+  if (!user?.id) return []
+  const result = await pb.collection('study_sessions').getList(1, limit, {
+    filter: `user = "${user.id}" && endedAt != ""`,
+    sort: '-startedAt',
+    requestKey: 'sessions-recent',
+  })
+  return result.items.map((item) => {
+    const rawEnded = item['endedAt'] as string | null | undefined
+    return {
+      id: item.id,
+      mode: item['mode'] as TimerMode,
+      startedAt: item['startedAt'] as string,
+      endedAt: rawEnded && rawEnded !== '' ? rawEnded : null,
+      durationSec: (item['durationSec'] as number) ?? 0,
+      notes: (item['notes'] as string | undefined) ?? '',
+      subjectId: (item['subject'] as string | undefined) || null,
+    }
   })
 }
 

@@ -27,12 +27,16 @@ const STATS_KEYS = {
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
 
+// 366 days so the year-heatmap always has at least one full year of data even
+// across leap years and edge transitions between local-tz and UTC days.
+const STATS_WINDOW_DAYS = 366
+
 async function fetchLast90DaysSessions(): Promise<StatsSession[]> {
   const user = pb.authStore.model
   if (!user?.id) return []
 
   const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 90)
+  cutoff.setDate(cutoff.getDate() - STATS_WINDOW_DAYS)
   const cutoffStr = cutoff.toISOString().replace('T', ' ').substring(0, 19)
 
   const result = await pb.collection('study_sessions').getList(1, 2000, {

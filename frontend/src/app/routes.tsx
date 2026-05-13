@@ -14,6 +14,7 @@ import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { HomeTimerPage } from '@/features/timer/pages/HomeTimerPage'
 import { ActiveSessionPage } from '@/features/timer/pages/ActiveSessionPage'
+import { SessionSummaryPage } from '@/features/timer/pages/SessionSummaryPage'
 import { OnboardingPage } from '@/features/onboarding/pages/OnboardingPage'
 import { FriendsPage } from '@/features/friends/pages/FriendsPage'
 import { AddFriendPage } from '@/features/friends/pages/AddFriendPage'
@@ -110,6 +111,14 @@ export function AppRoutes() {
         element={
           <RequireAuth>
             <ActiveSessionPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/timer/summary/:id"
+        element={
+          <RequireAuth>
+            <SessionSummaryPage />
           </RequireAuth>
         }
       />

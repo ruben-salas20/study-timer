@@ -111,4 +111,38 @@ describe('sessions API', () => {
       expect(new Date(dateStr).toISOString()).toBe(dateStr)
     })
   })
+
+  describe('updateSessionNotes()', () => {
+    it('patches only the notes field', async () => {
+      const pb = (await import('@/shared/pb')).default
+      const mockUpdate = vi.fn().mockResolvedValue({ id: 's1' })
+      vi.mocked(pb.collection).mockReturnValue({
+        create: vi.fn(),
+        update: mockUpdate,
+        getList: vi.fn(),
+      } as unknown as ReturnType<typeof pb.collection>)
+
+      const { updateSessionNotes } = await import('./sessions')
+      await updateSessionNotes('s1', 'Estudié álgebra')
+
+      expect(mockUpdate).toHaveBeenCalledWith('s1', { notes: 'Estudié álgebra' })
+    })
+
+    it('truncates notes to 500 chars to match the schema cap', async () => {
+      const pb = (await import('@/shared/pb')).default
+      const mockUpdate = vi.fn().mockResolvedValue({ id: 's1' })
+      vi.mocked(pb.collection).mockReturnValue({
+        create: vi.fn(),
+        update: mockUpdate,
+        getList: vi.fn(),
+      } as unknown as ReturnType<typeof pb.collection>)
+
+      const long = 'x'.repeat(600)
+      const { updateSessionNotes } = await import('./sessions')
+      await updateSessionNotes('s1', long)
+
+      const passed = (mockUpdate.mock.calls[0][1] as { notes: string }).notes
+      expect(passed.length).toBe(500)
+    })
+  })
 })

@@ -7,6 +7,8 @@ import { MetricTile } from '../components/MetricTile'
 import { DayBarChart } from '../components/DayBarChart'
 import { ModeBreakdown } from '../components/ModeBreakdown'
 import { SubjectBreakdown } from '../components/SubjectBreakdown'
+import { RecentSessionsList } from '../components/RecentSessionsList'
+import { YearHeatmap } from '../components/YearHeatmap'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -76,6 +78,14 @@ export function StatsPage() {
               </div>
             </section>
 
+            {/* ── Year heatmap ─────────────────────────────────────────── */}
+            <section>
+              <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+                Actividad del año
+              </p>
+              <YearHeatmap byDay={stats.byDay} tz={userTz} />
+            </section>
+
             {/* ── Mode breakdown ───────────────────────────────────────── */}
             <section>
               <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
@@ -90,6 +100,14 @@ export function StatsPage() {
                 Tiempo por materia
               </p>
               <SubjectBreakdown bySubject={stats.bySubject} />
+            </section>
+
+            {/* ── Recent sessions ──────────────────────────────────────── */}
+            <section>
+              <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+                Sesiones recientes
+              </p>
+              <RecentSessionsList />
             </section>
           </>
         )}
