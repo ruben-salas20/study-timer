@@ -11,17 +11,19 @@
 //   All POST /dispatch calls must include: Authorization: Bearer <PUSH_SERVICE_TOKEN>
 //   This shared secret prevents unauthorized parties from triggering pushes.
 //
+// PocketBase access:
+//   The push_subscriptions collection is owner-only (listRule). To read every
+//   user's subs, push-service authenticates as a SUPERUSER at startup.
+//   Preferred env vars:
+//     POCKETBASE_ADMIN_EMAIL / POCKETBASE_ADMIN_PASSWORD — self-healing,
+//       re-authenticates on token expiry.
+//   Legacy fallback:
+//     POCKETBASE_ADMIN_TOKEN — static token; will stop working when PB rotates
+//       or the token expires. Only used if email/password aren't provided.
+//
 // VAPID:
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT must be set via env.
 //   Generate with: npx web-push generate-vapid-keys
-//
-// Environment variables (see .env.example):
-//   VAPID_PUBLIC_KEY      — base64-url VAPID public key
-//   VAPID_PRIVATE_KEY     — base64-url VAPID private key (SECRET)
-//   VAPID_SUBJECT         — mailto: or https: contact URL
-//   POCKETBASE_URL        — PocketBase API base URL (default: http://localhost:8090)
-//   PUSH_SERVICE_TOKEN    — shared secret for /dispatch authentication (SECRET)
-//   PORT                  — HTTP port (default: 3001)
 
 import "dotenv/config";
 import express from "express";
@@ -35,6 +37,9 @@ const {
   VAPID_PRIVATE_KEY,
   VAPID_SUBJECT,
   POCKETBASE_URL = "http://localhost:8090",
+  POCKETBASE_ADMIN_EMAIL,
+  POCKETBASE_ADMIN_PASSWORD,
+  POCKETBASE_ADMIN_TOKEN,
   PUSH_SERVICE_TOKEN,
   PORT = "3001",
 } = process.env;
@@ -51,34 +56,84 @@ if (!PUSH_SERVICE_TOKEN) {
   process.exit(1);
 }
 
+if (!POCKETBASE_ADMIN_EMAIL && !POCKETBASE_ADMIN_TOKEN) {
+  console.warn(
+    "[push-service] WARNING: Neither POCKETBASE_ADMIN_EMAIL nor POCKETBASE_ADMIN_TOKEN " +
+    "is set. push_subscriptions queries will return empty (owner-only listRule) " +
+    "and every dispatch will report sent=0. Set POCKETBASE_ADMIN_EMAIL + " +
+    "POCKETBASE_ADMIN_PASSWORD for self-healing auth."
+  );
+}
+
 // Configure web-push VAPID details
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // ── PocketBase client ──────────────────────────────────────────────────────
 
-// Uses admin-level access via the POCKETBASE_URL — hooks call us with userId,
-// we look up subscriptions in push_subscriptions using an admin token or
-// open collection rules. Since push_subscriptions listRule requires auth,
-// we use a PocketBase admin client authenticated at startup.
-//
-// For simplicity in F6, push_subscriptions are queried as superuser via
-// PocketBase's admin API. The POCKETBASE_ADMIN_EMAIL/PASSWORD or
-// POCKETBASE_ADMIN_TOKEN env can be used when available. If not set,
-// we rely on the collection being accessible without auth (not recommended
-// for prod — see README).
 const pb = new PocketBase(POCKETBASE_URL);
+
+/**
+ * authenticate — establish a superuser session on the shared `pb` client.
+ * Tries email/password first (preferred, self-healing). Falls back to a
+ * static token if only that's available. Logs and re-throws on failure so
+ * callers can decide whether to retry or abort.
+ */
+async function authenticate() {
+  if (POCKETBASE_ADMIN_EMAIL && POCKETBASE_ADMIN_PASSWORD) {
+    await pb
+      .collection("_superusers")
+      .authWithPassword(POCKETBASE_ADMIN_EMAIL, POCKETBASE_ADMIN_PASSWORD);
+    console.log(
+      `[push-service] Authenticated as superuser ${POCKETBASE_ADMIN_EMAIL}`
+    );
+    return;
+  }
+  if (POCKETBASE_ADMIN_TOKEN) {
+    pb.authStore.save(POCKETBASE_ADMIN_TOKEN, null);
+    console.log("[push-service] Using static POCKETBASE_ADMIN_TOKEN");
+    return;
+  }
+  throw new Error("No admin credentials available");
+}
+
+/**
+ * fetchUserSubscriptions — list push subscriptions for a user, transparently
+ * re-authenticating once if the token has expired or was lost.
+ */
+async function fetchUserSubscriptions(userId) {
+  async function query() {
+    return pb
+      .collection("push_subscriptions")
+      .getFullList({ filter: `user = "${userId}"` });
+  }
+
+  try {
+    return await query();
+  } catch (err) {
+    // 401 here is almost always a stale token. Try a single re-auth + retry
+    // so a long-running service can survive a TTL expiry without manual ops.
+    if (err?.status === 401 && POCKETBASE_ADMIN_EMAIL && POCKETBASE_ADMIN_PASSWORD) {
+      console.warn("[push-service] 401 fetching subs — re-authenticating…");
+      try {
+        await authenticate();
+        return await query();
+      } catch (retryErr) {
+        console.error(
+          "[push-service] Re-auth or retry failed:",
+          retryErr?.message ?? retryErr
+        );
+        throw retryErr;
+      }
+    }
+    throw err;
+  }
+}
 
 // ── Express app ────────────────────────────────────────────────────────────
 
 const app = express();
 app.use(express.json());
 
-// ── Auth middleware ─────────────────────────────────────────────────────────
-
-/**
- * requireServiceToken — verifies Authorization: Bearer <PUSH_SERVICE_TOKEN>.
- * Rejects with 401 if missing or wrong.
- */
 function requireServiceToken(req, res, next) {
   const authHeader = req.headers["authorization"] ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
@@ -90,22 +145,10 @@ function requireServiceToken(req, res, next) {
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
-/**
- * GET /health — liveness probe.
- */
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({ status: "ok", authenticated: pb.authStore.isValid });
 });
 
-/**
- * POST /dispatch — send push notifications to all subscriptions for a user.
- *
- * Body:
- *   { userId: string, payload: { title: string, body: string, url?: string, tag?: string } }
- *
- * Returns:
- *   { sent: number, removed: number }
- */
 app.post("/dispatch", requireServiceToken, async (req, res) => {
   const { userId, payload } = req.body ?? {};
 
@@ -118,20 +161,17 @@ app.post("/dispatch", requireServiceToken, async (req, res) => {
 
   let subscriptions = [];
   try {
-    // Fetch all push subscriptions for this user.
-    // push_subscriptions listRule allows the owner only, so we need admin access.
-    // We authenticate as superuser using PocketBase's admin API if token provided.
-    const pbAdminToken = process.env.POCKETBASE_ADMIN_TOKEN ?? "";
-    if (pbAdminToken) {
-      pb.authStore.save(pbAdminToken, null);
-    }
-
-    subscriptions = await pb.collection("push_subscriptions").getFullList({
-      filter: `user = "${userId}"`,
-    });
+    subscriptions = await fetchUserSubscriptions(userId);
   } catch (err) {
     console.error("[push-service] Failed to fetch subscriptions:", err);
     return res.status(500).json({ error: "Failed to fetch subscriptions" });
+  }
+
+  if (subscriptions.length === 0) {
+    console.log(
+      `[push-service] Dispatched for user ${userId}: sent=0, removed=0 (no subscriptions)`
+    );
+    return res.json({ sent: 0, removed: 0, reason: "no_subscriptions" });
   }
 
   let sent = 0;
@@ -160,7 +200,6 @@ app.post("/dispatch", requireServiceToken, async (req, res) => {
       const statusCode = err?.statusCode;
 
       if (statusCode === 410 || statusCode === 404) {
-        // Subscription is gone — remove from PocketBase
         console.log(
           `[push-service] Removing stale subscription ${sub.id} (HTTP ${statusCode})`
         );
@@ -193,9 +232,23 @@ app.post("/dispatch", requireServiceToken, async (req, res) => {
 // ── Start ───────────────────────────────────────────────────────────────────
 
 const port = parseInt(PORT, 10);
-app.listen(port, () => {
-  console.log(`[push-service] Listening on port ${port}`);
-  console.log(`[push-service] PocketBase URL: ${POCKETBASE_URL}`);
-});
+
+(async () => {
+  // Authenticate at startup. If it fails we still listen so /health works
+  // and the dispatch route can attempt re-auth on first request.
+  try {
+    await authenticate();
+  } catch (err) {
+    console.error(
+      "[push-service] Startup authentication failed — dispatches will fail until creds are valid:",
+      err?.message ?? err
+    );
+  }
+
+  app.listen(port, () => {
+    console.log(`[push-service] Listening on port ${port}`);
+    console.log(`[push-service] PocketBase URL: ${POCKETBASE_URL}`);
+  });
+})();
 
 export default app;

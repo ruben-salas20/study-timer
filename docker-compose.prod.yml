@@ -98,6 +98,13 @@ services:
       - VAPID_SUBJECT
       - PUSH_SERVICE_TOKEN
       - POCKETBASE_URL=http://pocketbase:8090
+      # Self-healing superuser auth (preferred). The service authenticates
+      # at startup and re-auths on 401, so token TTL expiries don't break
+      # push delivery.
+      - POCKETBASE_ADMIN_EMAIL
+      - POCKETBASE_ADMIN_PASSWORD
+      # Legacy fallback (used only if email/password aren't set). Static
+      # tokens expire — prefer the email/password approach above.
       - POCKETBASE_ADMIN_TOKEN
     networks:
       - studytimer
