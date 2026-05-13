@@ -111,5 +111,15 @@ export const ACHIEVEMENTS_BY_KEY: Record<string, AchievementDef> = Object.fromEn
   ACHIEVEMENTS.map((a) => [a.key, a])
 )
 
-/** Total count of defined achievements — used in "N/25" labels. */
-export const ACHIEVEMENTS_TOTAL = ACHIEVEMENTS.length
+/** True when an achievement can be earned by user action. The founder tier
+ *  is the only handed-out one today — keep this predicate so progress
+ *  counters represent "what people can actually win". */
+export function isEarnable(a: AchievementDef): boolean {
+  return a.tier !== 'founder'
+}
+
+/** Earnable subset of the catalogue. Used by the main grid + counters. */
+export const EARNABLE_ACHIEVEMENTS: AchievementDef[] = ACHIEVEMENTS.filter(isEarnable)
+
+/** Total count of EARNABLE achievements — drives the "N/25" labels. */
+export const ACHIEVEMENTS_TOTAL = EARNABLE_ACHIEVEMENTS.length

@@ -27,7 +27,11 @@ import { resolveVisibility } from '../api/profile'
 import { useSendFriendRequest } from '@/features/friends/hooks/useFriends'
 import { useUserAchievements } from '@/features/achievements/hooks/useAchievements'
 import { AchievementCard } from '@/features/achievements/components/AchievementCard'
-import { ACHIEVEMENTS_BY_KEY, ACHIEVEMENTS_TOTAL } from '@/features/achievements/lib/registry'
+import {
+  ACHIEVEMENTS_BY_KEY,
+  ACHIEVEMENTS_TOTAL,
+  isEarnable,
+} from '@/features/achievements/lib/registry'
 import { Avatar } from '@/features/avatar/components/Avatar'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
@@ -266,42 +270,68 @@ export function UserProfilePage() {
             )}
 
             {/* ── Achievements (visible to self or friends, respects visibility) ─ */}
-            {visibility.achievements && (isFriend || isMe) && (achievementsQuery.data?.length ?? 0) > 0 && (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-widest opacity-50">
-                    Logros desbloqueados
-                  </p>
-                  <span className="text-[11px] opacity-60 tabular-nums">
-                    {achievementsQuery.data?.length ?? 0}/{ACHIEVEMENTS_TOTAL}
-                  </span>
-                </div>
-                <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1">
-                  {achievementsQuery.data?.map((u) => {
-                    const def = ACHIEVEMENTS_BY_KEY[u.key]
-                    if (!def) return null
-                    return (
-                      <AchievementCard
-                        key={u.id}
-                        def={def}
-                        unlocked
-                        unlockedAt={u.unlockedAt}
-                        compact
-                      />
-                    )
-                  })}
-                </div>
-                {isMe && (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/achievements')}
-                    className="self-end text-xs text-(--color-primary) font-medium"
-                  >
-                    Ver todos →
-                  </button>
-                )}
-              </section>
-            )}
+            {visibility.achievements && (isFriend || isMe) && (achievementsQuery.data?.length ?? 0) > 0 && (() => {
+              // Split earnable vs special (founder) so the counter stays at
+              // "N/25" — the same total users see on /achievements.
+              const earnable = (achievementsQuery.data ?? []).filter((u) => {
+                const def = ACHIEVEMENTS_BY_KEY[u.key]
+                return def ? isEarnable(def) : true
+              })
+              const specials = (achievementsQuery.data ?? []).filter((u) => {
+                const def = ACHIEVEMENTS_BY_KEY[u.key]
+                return def ? !isEarnable(def) : false
+              })
+              return (
+                <section className="flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-widest opacity-50">
+                      Logros desbloqueados
+                    </p>
+                    <span className="text-[11px] opacity-60 tabular-nums">
+                      {earnable.length}/{ACHIEVEMENTS_TOTAL}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1">
+                    {/* Specials (founder) go first so they stand out. */}
+                    {specials.map((u) => {
+                      const def = ACHIEVEMENTS_BY_KEY[u.key]
+                      if (!def) return null
+                      return (
+                        <AchievementCard
+                          key={u.id}
+                          def={def}
+                          unlocked
+                          unlockedAt={u.unlockedAt}
+                          compact
+                        />
+                      )
+                    })}
+                    {earnable.map((u) => {
+                      const def = ACHIEVEMENTS_BY_KEY[u.key]
+                      if (!def) return null
+                      return (
+                        <AchievementCard
+                          key={u.id}
+                          def={def}
+                          unlocked
+                          unlockedAt={u.unlockedAt}
+                          compact
+                        />
+                      )
+                    })}
+                  </div>
+                  {isMe && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/achievements')}
+                      className="self-end text-xs text-(--color-primary) font-medium"
+                    >
+                      Ver todos →
+                    </button>
+                  )}
+                </section>
+              )
+            })()}
 
             {/* ── Shared challenges (vs me only) ───────────────────────── */}
             {!isMe && (sharedChallengesQuery.data?.length ?? 0) > 0 && (

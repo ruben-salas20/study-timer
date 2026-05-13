@@ -6,7 +6,12 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Gem } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useMyAchievements } from '../hooks/useAchievements'
-import { ACHIEVEMENTS, ACHIEVEMENTS_TOTAL } from '../lib/registry'
+import {
+  EARNABLE_ACHIEVEMENTS,
+  ACHIEVEMENTS_BY_KEY,
+  ACHIEVEMENTS_TOTAL,
+  isEarnable,
+} from '../lib/registry'
 import { AchievementCard } from '../components/AchievementCard'
 import { GrantFounderModal } from '../components/GrantFounderModal'
 import { BottomNav } from '@/shared/ui/BottomNav'
@@ -25,7 +30,19 @@ export function AchievementsPage() {
     return m
   }, [unlocked])
 
-  const unlockedCount = unlockedMap.size
+  // Count only earnable achievements toward the "N/25" header — the
+  // founder one is special-cased to its own block above the grid.
+  const unlockedEarnableCount = useMemo(() => {
+    let count = 0
+    for (const key of unlockedMap.keys()) {
+      const def = ACHIEVEMENTS_BY_KEY[key]
+      if (def && isEarnable(def)) count++
+    }
+    return count
+  }, [unlockedMap])
+
+  const founderDef = ACHIEVEMENTS_BY_KEY['founder']
+  const founderUnlockedAt = unlockedMap.get('founder')
 
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
@@ -40,7 +57,7 @@ export function AchievementsPage() {
         </button>
         <h1 className="text-2xl font-bold">Logros</h1>
         <span className="ml-auto text-sm font-mono opacity-60 tabular-nums">
-          {unlockedCount}/{ACHIEVEMENTS_TOTAL}
+          {unlockedEarnableCount}/{ACHIEVEMENTS_TOTAL}
         </span>
       </header>
 
@@ -53,9 +70,22 @@ export function AchievementsPage() {
           </div>
         )}
 
+        {!isLoading && founderUnlockedAt && founderDef && (
+          <section className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest opacity-50">
+              Especial
+            </p>
+            <AchievementCard
+              def={founderDef}
+              unlocked
+              unlockedAt={founderUnlockedAt}
+            />
+          </section>
+        )}
+
         {!isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {ACHIEVEMENTS.map((def) => (
+            {EARNABLE_ACHIEVEMENTS.map((def) => (
               <AchievementCard
                 key={def.key}
                 def={def}
