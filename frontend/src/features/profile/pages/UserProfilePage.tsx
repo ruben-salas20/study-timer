@@ -106,6 +106,7 @@ export function UserProfilePage() {
       return {
         stats: { streak: true, total: true, week: true, bestDay: true },
         achievements: true,
+        hiddenAchievements: [] as string[],
       }
     }
     return resolved
@@ -271,16 +272,24 @@ export function UserProfilePage() {
 
             {/* ── Achievements (visible to self or friends, respects visibility) ─ */}
             {visibility.achievements && (isFriend || isMe) && (achievementsQuery.data?.length ?? 0) > 0 && (() => {
+              // Apply per-achievement hide filter for non-owner views.
+              const hiddenSet = new Set(visibility.hiddenAchievements)
+              const visibleUnlocked = (achievementsQuery.data ?? []).filter(
+                (u) => !hiddenSet.has(u.key)
+              )
+              if (visibleUnlocked.length === 0) return null
+
               // Split earnable vs special (founder) so the counter stays at
               // "N/25" — the same total users see on /achievements.
-              const earnable = (achievementsQuery.data ?? []).filter((u) => {
+              const earnable = visibleUnlocked.filter((u) => {
                 const def = ACHIEVEMENTS_BY_KEY[u.key]
                 return def ? isEarnable(def) : true
               })
-              const specials = (achievementsQuery.data ?? []).filter((u) => {
+              const specials = visibleUnlocked.filter((u) => {
                 const def = ACHIEVEMENTS_BY_KEY[u.key]
                 return def ? !isEarnable(def) : false
               })
+              const ordered = [...specials, ...earnable]
               return (
                 <section className="flex flex-col gap-3">
                   <div className="flex items-baseline justify-between">
@@ -291,22 +300,11 @@ export function UserProfilePage() {
                       {earnable.length}/{ACHIEVEMENTS_TOTAL}
                     </span>
                   </div>
-                  <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1">
-                    {/* Specials (founder) go first so they stand out. */}
-                    {specials.map((u) => {
-                      const def = ACHIEVEMENTS_BY_KEY[u.key]
-                      if (!def) return null
-                      return (
-                        <AchievementCard
-                          key={u.id}
-                          def={def}
-                          unlocked
-                          unlockedAt={u.unlockedAt}
-                          compact
-                        />
-                      )
-                    })}
-                    {earnable.map((u) => {
+                  {/* Grid view — compact cards wrap into multiple rows so
+                      friends can see everything at a glance instead of
+                      sideways-scrolling through them. */}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {ordered.map((u) => {
                       const def = ACHIEVEMENTS_BY_KEY[u.key]
                       if (!def) return null
                       return (

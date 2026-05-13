@@ -10,6 +10,10 @@ export interface ProfileVisibility {
     bestDay?: boolean
   }
   achievements?: boolean
+  /** Achievement keys explicitly hidden by the user. Newly unlocked
+   *  achievements default to visible (not in this list). Whole-section
+   *  toggle (`achievements`) still wins — turning it off hides everything. */
+  hiddenAchievements?: string[]
 }
 
 export interface ProfilePatch {
@@ -27,6 +31,7 @@ export interface ProfilePatch {
 export function resolveVisibility(raw: ProfileVisibility | undefined | null): {
   stats: { streak: boolean; total: boolean; week: boolean; bestDay: boolean }
   achievements: boolean
+  hiddenAchievements: string[]
 } {
   const v = raw ?? {}
   return {
@@ -37,6 +42,7 @@ export function resolveVisibility(raw: ProfileVisibility | undefined | null): {
       bestDay: v.stats?.bestDay ?? true,
     },
     achievements: v.achievements ?? true,
+    hiddenAchievements: Array.isArray(v.hiddenAchievements) ? v.hiddenAchievements : [],
   }
 }
 

@@ -7,6 +7,8 @@ import {
   resolveVisibility,
   type ProfileVisibility,
 } from '../api/profile'
+import { useMyAchievements } from '@/features/achievements/hooks/useAchievements'
+import { ACHIEVEMENTS_BY_KEY, TIER_STYLE } from '@/features/achievements/lib/registry'
 
 interface VisibilityModalProps {
   initial: ProfileVisibility | undefined
@@ -21,8 +23,24 @@ export function VisibilityModal({ initial, onClose, onSaved }: VisibilityModalPr
   const [week, setWeek] = useState(resolved.stats.week)
   const [bestDay, setBestDay] = useState(resolved.stats.bestDay)
   const [achievements, setAchievements] = useState(resolved.achievements)
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(
+    () => new Set(resolved.hiddenAchievements)
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Need the user's unlocked achievements to render per-item toggles.
+  const myUnlockedQuery = useMyAchievements()
+  const myUnlocked = myUnlockedQuery.data ?? []
+
+  function toggleKey(key: string, visible: boolean) {
+    setHiddenKeys((prev) => {
+      const next = new Set(prev)
+      if (visible) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   async function handleSave() {
     setSaving(true)
@@ -31,6 +49,7 @@ export function VisibilityModal({ initial, onClose, onSaved }: VisibilityModalPr
       const next: ProfileVisibility = {
         stats: { streak, total, week, bestDay },
         achievements,
+        hiddenAchievements: Array.from(hiddenKeys),
       }
       await updateProfile({ profileVisibility: next })
       onSaved()
@@ -89,11 +108,56 @@ export function VisibilityModal({ initial, onClose, onSaved }: VisibilityModalPr
           </p>
           <Toggle
             icon={<Award size={16} />}
-            label="Logros desbloqueados"
+            label="Sección de logros"
             value={achievements}
             onChange={setAchievements}
           />
         </section>
+
+        {/* Per-achievement toggles — only meaningful when the section
+            itself is visible AND the user actually has unlocks. */}
+        {achievements && myUnlocked.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest opacity-50">
+              Logros específicos visibles
+            </p>
+            <p className="text-[11px] opacity-50 -mt-1">
+              Destildá los que NO querés mostrar en tu perfil público.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-64 overflow-y-auto pr-1">
+              {myUnlocked.map((u) => {
+                const def = ACHIEVEMENTS_BY_KEY[u.key]
+                if (!def) return null
+                const tier = TIER_STYLE[def.tier]
+                const Icon = def.icon
+                const visible = !hiddenKeys.has(u.key)
+                return (
+                  <label
+                    key={u.key}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-current/15 cursor-pointer"
+                  >
+                    <span
+                      className="inline-flex items-center justify-center w-6 h-6 rounded shrink-0"
+                      style={{
+                        background: `${tier.color}22`,
+                        color: tier.color,
+                      }}
+                    >
+                      <Icon size={12} />
+                    </span>
+                    <span className="text-xs flex-1 min-w-0 truncate">{def.name}</span>
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      onChange={(e) => toggleKey(u.key, e.target.checked)}
+                      className="w-4 h-4 accent-(--color-primary) shrink-0"
+                    />
+                  </label>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {error && (
           <p className="text-xs text-red-400">{error}</p>
