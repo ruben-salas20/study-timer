@@ -56,14 +56,27 @@ export function StatsPage() {
         {!stats.isEmpty && (
           <>
             {/* ── Streak hero ─────────────────────────────────────────── */}
-            <StreakHero
-              streakDays={stats.streak}
-              freezesRemaining={
-                typeof pb.authStore.model?.freezeBudget === 'number'
-                  ? (pb.authStore.model?.freezeBudget as number)
+            {(() => {
+              // Effective budget = stored value only when the user's
+              // freezeMonth matches the current calendar month. Otherwise
+              // the hook hasn't refilled yet — display the full default of
+              // 2 so the chip doesn't show a stale 0 to users who simply
+              // haven't ended a session since the rollover (or since the
+              // freeze fields were first added).
+              const currentMonth = new Date().toISOString().slice(0, 7)
+              const storedMonth = pb.authStore.model?.freezeMonth as string | undefined
+              const storedBudget = pb.authStore.model?.freezeBudget as number | undefined
+              const freezesRemaining =
+                storedMonth === currentMonth && typeof storedBudget === 'number'
+                  ? storedBudget
                   : 2
-              }
-            />
+              return (
+                <StreakHero
+                  streakDays={stats.streak}
+                  freezesRemaining={freezesRemaining}
+                />
+              )
+            })()}
 
             {/* ── 4 metric tiles ───────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
