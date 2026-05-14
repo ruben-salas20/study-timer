@@ -9,6 +9,8 @@ import { ModeBreakdown } from '../components/ModeBreakdown'
 import { SubjectBreakdown } from '../components/SubjectBreakdown'
 import { RecentSessionsList } from '../components/RecentSessionsList'
 import { YearHeatmap } from '../components/YearHeatmap'
+import { WeekDeltaCard } from '../components/WeekDeltaCard'
+import { HourlyDistribution } from '../components/HourlyDistribution'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import { EmptyState } from '@/shared/ui/EmptyState'
@@ -54,7 +56,14 @@ export function StatsPage() {
         {!stats.isEmpty && (
           <>
             {/* ── Streak hero ─────────────────────────────────────────── */}
-            <StreakHero streakDays={stats.streak} />
+            <StreakHero
+              streakDays={stats.streak}
+              freezesRemaining={
+                typeof pb.authStore.model?.freezeBudget === 'number'
+                  ? (pb.authStore.model?.freezeBudget as number)
+                  : 2
+              }
+            />
 
             {/* ── 4 metric tiles ───────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
@@ -76,6 +85,19 @@ export function StatsPage() {
               <div className="overflow-x-auto">
                 <DayBarChart data={stats.chartData} maxSec={stats.maxSec} />
               </div>
+            </section>
+
+            {/* ── Week-over-week comparison ───────────────────────────── */}
+            <section>
+              <WeekDeltaCard data={stats.weekDelta} />
+            </section>
+
+            {/* ── Hourly distribution + best hour ─────────────────────── */}
+            <section>
+              <p className="text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">
+                Actividad por hora del día
+              </p>
+              <HourlyDistribution buckets={stats.hourly} best={stats.bestHour} />
             </section>
 
             {/* ── Year heatmap ─────────────────────────────────────────── */}

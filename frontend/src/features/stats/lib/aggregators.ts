@@ -129,14 +129,24 @@ export function groupSessionsBySubject(sessions: StatsSession[]): Map<string, nu
  * A day is "in the streak" if it is today OR if the day immediately after it
  * is also in the streak. Sessions before a gap do NOT count.
  */
-export function computeStreakDays(sessions: StatsSession[], tz: string): number {
-  if (sessions.length === 0) return 0
+export function computeStreakDays(
+  sessions: StatsSession[],
+  tz: string,
+  frozenDays?: Iterable<string>
+): number {
+  if (sessions.length === 0 && !frozenDays) return 0
 
-  // Collect unique day keys from sessions
+  // Collect unique day keys from sessions. Frozen days (rescued by a freeze)
+  // count as "in-streak" days even though no session exists for them.
   const daySet = new Set<string>()
   for (const session of sessions) {
     daySet.add(toLocalDateKey(session.startedAt, tz))
   }
+  if (frozenDays) {
+    for (const d of frozenDays) daySet.add(d)
+  }
+
+  if (daySet.size === 0) return 0
 
   const today = todayKey(tz)
 
@@ -230,4 +240,98 @@ export function computeWeekTotal(
   }
 
   return total
+}
+
+// ── computeWeekDelta ──────────────────────────────────────────────────────────
+
+export interface WeekDelta {
+  thisWeekSec: number
+  lastWeekSec: number
+  /** Percent change vs the previous week. Capped at +999/-100 for display.
+   *  `null` when the previous week had zero activity (delta undefined). */
+  deltaPct: number | null
+}
+
+/**
+ * computeWeekDelta — current week's total + previous week's total + delta %.
+ * Used in /stats to show "esta semana vs anterior". The week starts on Monday.
+ */
+export function computeWeekDelta(
+  sessions: StatsSession[],
+  tz: string,
+  referenceDate?: Date
+): WeekDelta {
+  const now = referenceDate ?? new Date()
+  const lastWeekRef = new Date(now)
+  lastWeekRef.setUTCDate(lastWeekRef.getUTCDate() - 7)
+
+  const thisWeekSec = computeWeekTotal(sessions, tz, 'monday', now)
+  const lastWeekSec = computeWeekTotal(sessions, tz, 'monday', lastWeekRef)
+
+  let deltaPct: number | null = null
+  if (lastWeekSec > 0) {
+    const raw = ((thisWeekSec - lastWeekSec) / lastWeekSec) * 100
+    deltaPct = Math.max(-100, Math.min(999, Math.round(raw)))
+  }
+  return { thisWeekSec, lastWeekSec, deltaPct }
+}
+
+// ── computeHourlyDistribution ────────────────────────────────────────────────
+
+/**
+ * computeHourlyDistribution — 24-slot histogram of total durationSec grouped
+ * by the START hour of each session in the user's local timezone. Index 0 =
+ * midnight, index 23 = 11 PM. Used to surface "tu mejor hora del día" in /stats.
+ */
+export function computeHourlyDistribution(
+  sessions: StatsSession[],
+  tz: string
+): number[] {
+  const buckets = new Array(24).fill(0)
+  for (const session of sessions) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        hour: 'numeric',
+        hour12: false,
+      }).formatToParts(new Date(session.startedAt))
+      const h = parts.find((p) => p.type === 'hour')
+      const hour = h ? parseInt(h.value, 10) : NaN
+      if (!Number.isNaN(hour) && hour >= 0 && hour < 24) {
+        buckets[hour] += session.durationSec
+      }
+    } catch {
+      // fall through — session contributes 0 to histogram
+    }
+  }
+  return buckets
+}
+
+/**
+ * pickBestHourRange — given a 24-slot histogram, find the contiguous range
+ * (length 1 by default) with the highest total. Returns `null` if every bucket
+ * is empty. The range wraps around midnight correctly.
+ */
+export function pickBestHourRange(
+  buckets: number[],
+  windowHours = 1
+): { startHour: number; endHour: number; totalSec: number } | null {
+  let max = 0
+  let bestStart = -1
+  for (let i = 0; i < buckets.length; i++) {
+    let sum = 0
+    for (let k = 0; k < windowHours; k++) {
+      sum += buckets[(i + k) % buckets.length]
+    }
+    if (sum > max) {
+      max = sum
+      bestStart = i
+    }
+  }
+  if (bestStart < 0) return null
+  return {
+    startHour: bestStart,
+    endHour: (bestStart + windowHours) % 24,
+    totalSec: max,
+  }
 }

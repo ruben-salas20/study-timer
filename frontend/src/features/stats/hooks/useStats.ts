@@ -13,6 +13,9 @@ import {
   computeStreakDays,
   computeBestDay,
   computeWeekTotal,
+  computeWeekDelta,
+  computeHourlyDistribution,
+  pickBestHourRange,
   todayKey,
   toLocalDateKey,
   type StatsSession,
@@ -91,13 +94,23 @@ export function useStats(tz = 'UTC') {
 
   const sessions = query.data ?? []
 
+  // Pull the user's stored freeze state from authStore so streak math here
+  // matches what the backend persisted on the last session end.
+  const authModel = pb.authStore.model as Record<string, unknown> | null
+  const frozenDays = Array.isArray(authModel?.freezeAppliedDates)
+    ? (authModel?.freezeAppliedDates as string[])
+    : []
+
   const derived = useMemo(() => {
     const byDay = groupSessionsByDay(sessions, tz)
     const byMode = groupSessionsByMode(sessions)
     const bySubject = groupSessionsBySubject(sessions)
-    const streak = computeStreakDays(sessions, tz)
+    const streak = computeStreakDays(sessions, tz, frozenDays)
     const bestDay = computeBestDay(sessions, tz)
     const weekTotal = computeWeekTotal(sessions, tz)
+    const weekDelta = computeWeekDelta(sessions, tz)
+    const hourly = computeHourlyDistribution(sessions, tz)
+    const bestHour = pickBestHourRange(hourly, 1)
     const allTime = sessions.reduce((s, sess) => s + sess.durationSec, 0)
 
     // Today sessions — use the same timezone the byDay map was built with.
@@ -132,6 +145,9 @@ export function useStats(tz = 'UTC') {
       bestDay: { ...bestDay, fmt: bestDay.totalSec > 0 ? formatMinutes(bestDay.totalSec) : '—' },
       chartData,
       maxSec,
+      weekDelta,
+      hourly,
+      bestHour,
     }
   }, [sessions, tz])
 
