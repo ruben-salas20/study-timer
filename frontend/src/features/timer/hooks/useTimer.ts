@@ -13,6 +13,13 @@ import {
 import { createSession, endSession, getSession } from '../api/sessions'
 import type { TimerMode } from '../api/sessions'
 import type { PomodoroConfig } from '../schemas'
+import {
+  enqueueCreate,
+  enqueueEnd,
+  flush as flushOfflineOutbox,
+  hasPending,
+  isTempId,
+} from '../lib/offlineOutbox'
 import pb from '@/shared/pb'
 import {
   alertWorkPhaseEnded,
@@ -166,6 +173,44 @@ export function useTimer(options: UseTimerOptions = {}) {
     }
   }, [clearTick, startTick])
 
+  // Outbox flush — replay any session create/end that was queued while the
+  // device was offline. Fires on mount (in case the queue has stale entries
+  // from a previous run) and whenever the browser regains connectivity.
+  useEffect(() => {
+    function remapStoreSessionId(tempId: string, realId: string) {
+      // Update the live store if the active session is still using the
+      // tempId, then rewrite the localStorage rehydrate blob so a refresh
+      // resumes against the real record.
+      if (useTimerStore.getState().sessionId === tempId) {
+        useTimerStore.getState().setSessionId(realId)
+      }
+      try {
+        const raw = localStorage.getItem(ACTIVE_SESSION_KEY)
+        if (raw) {
+          const data = JSON.parse(raw) as ActiveSessionData
+          if (data.sessionId === tempId) {
+            data.sessionId = realId
+            localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(data))
+          }
+        }
+      } catch {
+        // ignore — store update above is the source of truth either way
+      }
+      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    }
+
+    function run() {
+      if (!hasPending()) return
+      void flushOfflineOutbox(remapStoreSessionId)
+    }
+
+    run()
+    window.addEventListener('online', run)
+    return () => {
+      window.removeEventListener('online', run)
+    }
+  }, [queryClient])
+
   // Rehydrate active session from localStorage on mount.
   //
   // We restore the store OPTIMISTICALLY (synchronously from localStorage) and
@@ -237,12 +282,40 @@ export function useTimer(options: UseTimerOptions = {}) {
       const totalCycles = pomodoroConfig?.cycles ?? 1
       const now = Date.now()
 
-      // Create the PocketBase record first
-      const sessionId = await createSession(mode, {
-        pomodoroConfig: pomodoroConfig ?? undefined,
-        targetSec: targetSec ?? undefined,
-        subjectId: opts.subjectId ?? null,
-      })
+      // Create the PocketBase record first. If the device is offline we
+      // generate a local tempId, queue the create for later, and let the
+      // timer run normally. The outbox flush replaces it with the real id
+      // as soon as connectivity is back.
+      let sessionId: string
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+      if (online) {
+        try {
+          sessionId = await createSession(mode, {
+            pomodoroConfig: pomodoroConfig ?? undefined,
+            targetSec: targetSec ?? undefined,
+            subjectId: opts.subjectId ?? null,
+          })
+        } catch (err) {
+          // Treat a runtime API failure the same as offline — the user
+          // shouldn't lose their session because of a flaky connection.
+          console.warn('[useTimer] start: createSession failed, queueing offline', err)
+          sessionId = enqueueCreate({
+            mode,
+            pomodoroConfig,
+            targetSec,
+            subjectId: opts.subjectId ?? null,
+            clientStartedAt: new Date(now).toISOString(),
+          })
+        }
+      } else {
+        sessionId = enqueueCreate({
+          mode,
+          pomodoroConfig,
+          targetSec,
+          subjectId: opts.subjectId ?? null,
+          clientStartedAt: new Date(now).toISOString(),
+        })
+      }
 
       // Initialize store
       const store = useTimerStore.getState()
@@ -327,7 +400,21 @@ export function useTimer(options: UseTimerOptions = {}) {
     }
 
     if (sessionId) {
-      await endSession(sessionId, elapsedSec)
+      const online = typeof navigator !== 'undefined' ? navigator.onLine : true
+      const endedAtIso = new Date().toISOString()
+      // Temp ids only exist because we never reached the backend. Don't
+      // try to PATCH them — they aren't records yet. Queue the end so the
+      // outbox can replay create + end together on reconnect.
+      if (isTempId(sessionId) || !online) {
+        enqueueEnd(sessionId, elapsedSec, endedAtIso)
+      } else {
+        try {
+          await endSession(sessionId, elapsedSec)
+        } catch (err) {
+          console.warn('[useTimer] stop: endSession failed, queueing offline', err)
+          enqueueEnd(sessionId, elapsedSec, endedAtIso)
+        }
+      }
     }
 
     localStorage.removeItem(ACTIVE_SESSION_KEY)
