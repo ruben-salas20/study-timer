@@ -26,7 +26,11 @@ export default defineConfig({
     //   - filename: the SW source filename
     //   - The source file MUST contain self.__WB_MANIFEST (injection point)
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (not 'autoUpdate'): a new SW installs and waits instead of
+      // silently reloading the app. The in-app UpdatePrompt banner lets the
+      // user choose when to apply the update — see src/pwa/sw.ts and
+      // src/features/pwa/components/UpdatePrompt.tsx.
+      registerType: 'prompt',
       strategies: 'injectManifest',
       srcDir: 'src/pwa',
       filename: 'sw.ts',

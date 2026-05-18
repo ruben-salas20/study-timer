@@ -23,25 +23,27 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
 declare const self: ServiceWorkerGlobalScope
 
-// ── Update lifecycle: take control of clients ASAP and reload them ──────────
-// Without skipWaiting/clientsClaim, new SW versions sit "waiting" until every
-// tab is closed. On activate, we also tell every controlled client to reload
-// so they pick up the new bundle immediately — without this, even after the
-// new SW activates, the page keeps running the old JS from the previous load
-// until the user manually refreshes.
-self.addEventListener('install', () => {
-  self.skipWaiting()
+// ── Update lifecycle: controlled, prompt-based updates ─────────────────────
+// vite-plugin-pwa runs in registerType:'prompt' mode. A freshly built SW
+// installs and then WAITS — it deliberately does NOT call skipWaiting on its
+// own, so the running app is never reloaded out from under the user (which
+// could cut a study timer mid-session).
+//
+// The in-app UpdatePrompt banner asks the user to update. When they accept,
+// the page posts a SKIP_WAITING message to this waiting SW; only then do we
+// skipWaiting and hand over.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
+
+// Once the new SW activates (after SKIP_WAITING), take control of open clients.
+// The page reload itself is driven by vite-plugin-pwa's registration, which
+// listens for `controllerchange` — so we must NOT navigate clients here, or it
+// would race with that reload.
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    self.clients.claim().then(async () => {
-      const clients = await self.clients.matchAll({ type: 'window' })
-      for (const client of clients) {
-        // Tell each open page to reload so it loads the fresh JS bundle
-        ;(client as WindowClient).navigate(client.url).catch(() => {})
-      }
-    })
-  )
+  event.waitUntil(self.clients.claim())
 })
 
 // ── Precaching ───────────────────────────────────────────────────────────────
@@ -119,9 +121,9 @@ registerRoute(
   new StaleWhileRevalidate({ cacheName: 'app-shell-cache' })
 )
 // Note: we also use precacheAndRoute(self.__WB_MANIFEST) above which precaches
-// the build's hashed assets. After deploy, vite-plugin-pwa autoUpdate triggers
-// a SW update, the new SW skipWaits, activates, and reloads all clients
-// (see activate listener above) so the new bundle takes over immediately.
+// the build's hashed assets. After a deploy, the registration polls for the
+// new SW; once it has installed and is waiting, the UpdatePrompt banner asks
+// the user to apply it (see the SKIP_WAITING message handler above).
 
 // ── Push notifications ───────────────────────────────────────────────────────
 

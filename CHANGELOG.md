@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.14] — 2026-05-18
+
+### Changed
+- PWA updates are now prompt-based instead of silent auto-reload. When a new
+  version is deployed, an "Nueva versión disponible" banner appears with an
+  "Actualizar" button — the app no longer reloads mid-session, and updates can
+  no longer be missed and leave the user on a stale build. The service worker
+  also re-checks for new versions hourly and whenever the tab regains focus.
+
 ## [0.5.13] — 2026-05-18
 
 ### Changed

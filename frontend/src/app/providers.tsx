@@ -4,12 +4,14 @@
 //   - QueryClientProvider (TanStack Query)
 //   - ThemeEffect: reads user.theme + user.accentColor → sets data-theme/data-accent on <html>
 //   - InstallPrompt: PWA install banner (F6) — renders conditionally at app shell level
+//   - UpdatePrompt: PWA "new version available" banner — prompts to apply SW updates
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import pb from '@/shared/pb'
 import { InstallPrompt } from '@/features/pwa/components/InstallPrompt'
+import { UpdatePrompt } from '@/features/pwa/components/UpdatePrompt'
 import { reconcilePushSubscription } from '@/features/pwa/api/push'
 
 /**
@@ -180,6 +182,8 @@ export function Providers({ children }: ProvidersProps) {
         <PushReconcileEffect />
         {/* InstallPrompt renders a fixed banner when the app is installable */}
         <InstallPrompt />
+        {/* UpdatePrompt renders a fixed banner when a new SW version is waiting */}
+        <UpdatePrompt />
         {children}
       </BrowserRouter>
     </QueryClientProvider>
