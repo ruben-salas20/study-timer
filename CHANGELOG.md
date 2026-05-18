@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.11] — 2026-05-18
+
+### Added
+- Three new preset cuy avatars: Ingeniero Ambiental, Marketing, Nutricionista
+
 ## [0.1.0] — 2026-05-07
 
 ### F8 — Final Polish

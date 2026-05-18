@@ -13,17 +13,20 @@ export interface AvatarPreset {
 }
 
 export const AVATAR_PRESETS: AvatarPreset[] = [
-  { key: 'abogado',     label: 'Abogado' },
-  { key: 'agricultor',  label: 'Agricultor' },
-  { key: 'arquitecto',  label: 'Arquitecto' },
-  { key: 'artista',     label: 'Artista' },
-  { key: 'astronauta',  label: 'Astronauta' },
-  { key: 'chef',        label: 'Chef' },
-  { key: 'cientifico',  label: 'Científico' },
-  { key: 'ingeniero',   label: 'Ingeniero' },
-  { key: 'medico',      label: 'Médico' },
-  { key: 'musico',      label: 'Músico' },
-  { key: 'programador', label: 'Programador' },
+  { key: 'abogado',       label: 'Abogado' },
+  { key: 'agricultor',    label: 'Agricultor' },
+  { key: 'arquitecto',    label: 'Arquitecto' },
+  { key: 'artista',       label: 'Artista' },
+  { key: 'astronauta',    label: 'Astronauta' },
+  { key: 'chef',          label: 'Chef' },
+  { key: 'cientifico',    label: 'Científico' },
+  { key: 'ing_ambiental', label: 'Ingeniero Ambiental' },
+  { key: 'ingeniero',     label: 'Ingeniero' },
+  { key: 'marketing',     label: 'Marketing' },
+  { key: 'medico',        label: 'Médico' },
+  { key: 'musico',        label: 'Músico' },
+  { key: 'nutricionista', label: 'Nutricionista' },
+  { key: 'programador',   label: 'Programador' },
 ]
 
 // Version-stamp the URL so the Service Worker (which caches images
