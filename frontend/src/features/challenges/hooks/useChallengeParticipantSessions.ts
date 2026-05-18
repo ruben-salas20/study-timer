@@ -3,7 +3,7 @@
 // where each string is a UTC day "YYYY-MM-DD".
 //
 // Pure data hook — no side effects beyond the TanStack Query fetch.
-// The aggregator (computeGroupStreakState) consumes the returned map.
+// GroupStreakCalendar consumes the returned map to render the 14-day dot grid.
 import { useQueries } from '@tanstack/react-query'
 import pb from '@/shared/pb'
 

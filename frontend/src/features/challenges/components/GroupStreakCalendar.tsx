@@ -1,12 +1,16 @@
 // GroupStreakCalendar.tsx — Streak calendar for group_streak challenges
 // Shows the last 14 UTC days as dots: filled if ALL participants studied that day.
-import { computeGroupStreakState } from '../lib/aggregators'
-import type { Challenge, Participant } from '../lib/aggregators'
+//
+// The streak COUNT is the server-computed `streakDays` stored on every
+// challenge_participants record (see on-session-end.pb.js). The backend counts
+// the longest consecutive run, inside the challenge window, of days where all
+// participants logged a completed session — and it is what decides the win.
+// The UI must show that same number; it does not recompute the streak here.
+import type { Participant } from '../lib/aggregators'
 
 interface GroupStreakCalendarProps {
-  challenge: Challenge
   participants: Participant[]
-  /** Session days per userId, UTC "YYYY-MM-DD" strings */
+  /** Session days per userId, UTC "YYYY-MM-DD" strings — used for the dot grid. */
   sessionsByUser: Record<string, string[]>
 }
 
@@ -20,8 +24,10 @@ function getLast14Days(): string[] {
   return days
 }
 
-export function GroupStreakCalendar({ challenge, participants, sessionsByUser }: GroupStreakCalendarProps) {
-  const { currentStreakDays } = computeGroupStreakState(challenge, sessionsByUser)
+export function GroupStreakCalendar({ participants, sessionsByUser }: GroupStreakCalendarProps) {
+  // All participants share the same streakDays — the backend writes an identical
+  // value to every participant record. Read the first one defensively.
+  const currentStreakDays = participants[0]?.streakDays ?? 0
   const days = getLast14Days()
   const userIds = participants.map((p) => p.userId)
 

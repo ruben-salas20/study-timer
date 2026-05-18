@@ -3,12 +3,10 @@
 // All functions are pure: same inputs → same outputs, no side effects.
 // This makes them trivially testable and composable in any UI layer.
 //
-// group_streak note: streakDays is NOT stored server-side (F4 decision).
-// computeGroupStreakState derives streak from session history, keyed by userId
-// and indexed by UTC day (YYYY-MM-DD). A day counts toward the streak if
-// ALL participants have at least one session on that day.
-//
-// Reference: ARCHITECTURE.md §4, F4 scope.
+// group_streak note: the streak is computed and stored server-side on each
+// challenge_participants record (streakDays) by on-session-end.pb.js — that is
+// the single source of truth. The UI reads that value; it does not recompute
+// the streak from raw session history.
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -121,54 +119,4 @@ export function computeDuelState(participants: Participant[]): DuelState {
     leaderProgressSec: leader.progressSec,
     gapSec: leader.progressSec - trailer.progressSec,
   }
-}
-
-// ── computeGroupStreakState ───────────────────────────────────────────────────
-
-export interface GroupStreakState {
-  currentStreakDays: number
-  brokenAt?: string // ISO date string of the day the streak broke
-}
-
-/**
- * computeGroupStreakState — derives streak from session history.
- *
- * sessionsByUser: Record<userId, string[]> where each string is "YYYY-MM-DD" UTC.
- *
- * A day counts toward the streak if ALL participants have at least one session
- * on that day. The streak is the count of qualifying days.
- *
- * For F4, we count ALL common days (not necessarily consecutive from today).
- * This keeps the logic simple and verifiable without real-time date tracking.
- */
-export function computeGroupStreakState(
-  _challenge: Challenge,
-  sessionsByUser: Record<string, string[]>
-): GroupStreakState {
-  const userIds = Object.keys(sessionsByUser)
-
-  if (userIds.length === 0) {
-    return { currentStreakDays: 0 }
-  }
-
-  // Collect all unique days across all users
-  const allDays = new Set<string>()
-  for (const days of Object.values(sessionsByUser)) {
-    for (const day of days) {
-      allDays.add(day)
-    }
-  }
-
-  // A day qualifies if every user has at least one session that day
-  let streakCount = 0
-  for (const day of allDays) {
-    const allParticipantsStudied = userIds.every((uid) =>
-      (sessionsByUser[uid] ?? []).includes(day)
-    )
-    if (allParticipantsStudied) {
-      streakCount++
-    }
-  }
-
-  return { currentStreakDays: streakCount }
 }

@@ -207,7 +207,6 @@ export function ChallengeDetailPage() {
 
           {challenge.type === 'group_streak' && (
             <GroupStreakCalendar
-              challenge={aggChallenge}
               participants={participants}
               sessionsByUser={sessionsByUser}
             />

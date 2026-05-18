@@ -59,16 +59,35 @@ export type DuelChallenge = z.infer<typeof duelSchema>
 
 // ── Group streak ──────────────────────────────────────────────────────────────
 
-export const groupStreakSchema = challengeBaseSchema.and(
-  z.object({
-    type: z.literal('group_streak'),
-    targetDays: z
-      .number({ required_error: 'El número de días es obligatorio' })
-      .int()
-      .min(3, 'El mínimo es 3 días')
-      .max(30, 'El máximo es 30 días'),
+/**
+ * Number of UTC calendar days covered by [start, end], inclusive of both ends.
+ * Mirrors the backend group_streak day-bucketing in on-session-end.pb.js, so the
+ * client-side ceiling matches the maximum streak the server can ever count.
+ */
+function utcDaySpan(start: Date, end: Date): number {
+  const ONE_DAY = 24 * 60 * 60 * 1000
+  const startDay = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+  const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())
+  return Math.floor((endDay - startDay) / ONE_DAY) + 1
+}
+
+export const groupStreakSchema = challengeBaseSchema
+  .and(
+    z.object({
+      type: z.literal('group_streak'),
+      targetDays: z
+        .number({ required_error: 'El número de días es obligatorio' })
+        .int()
+        .min(3, 'El mínimo es 3 días')
+        .max(30, 'El máximo es 30 días'),
+    })
+  )
+  // A streak goal longer than the challenge window is unreachable by design —
+  // the backend can count at most one valid day per calendar day in [start, end].
+  .refine((data) => data.targetDays <= utcDaySpan(data.startsAt, data.endsAt), {
+    message: 'La meta de días no puede superar la duración del reto',
+    path: ['targetDays'],
   })
-)
 
 export type GroupStreakChallenge = z.infer<typeof groupStreakSchema>
 

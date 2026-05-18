@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.12] — 2026-05-18
+
+### Fixed
+- Group streak challenges now display the server-computed `streakDays` (longest
+  consecutive run inside the challenge window) instead of a frontend recount that
+  summed all common days ever — including days before the challenge started.
+
+### Changed
+- Creating a group streak challenge now rejects a `targetDays` goal larger than
+  the challenge window, since such a goal is unreachable by design.
+
 ## [0.5.11] — 2026-05-18
 
 ### Added

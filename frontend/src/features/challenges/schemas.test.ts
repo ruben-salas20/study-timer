@@ -211,6 +211,28 @@ describe('groupStreakSchema', () => {
     })
     expect(result.success).toBe(false)
   })
+
+  it('rejects group_streak when targetDays exceeds the challenge window', () => {
+    // Window is tomorrow → nextWeek (7-day span); a 10-day goal is unreachable.
+    const result = groupStreakSchema.safeParse({
+      ...validGroupStreak,
+      startsAt: tomorrow,
+      endsAt: nextWeek,
+      targetDays: 10,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts group_streak when targetDays exactly fills the window', () => {
+    // tomorrow → nextWeek spans 7 inclusive UTC days; a 7-day goal fits.
+    const result = groupStreakSchema.safeParse({
+      ...validGroupStreak,
+      startsAt: tomorrow,
+      endsAt: nextWeek,
+      targetDays: 7,
+    })
+    expect(result.success).toBe(true)
+  })
 })
 
 // ── inviteParticipantsSchema ──────────────────────────────────────────────────

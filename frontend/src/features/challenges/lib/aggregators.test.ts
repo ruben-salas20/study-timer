@@ -4,7 +4,6 @@ import {
   computeRaceLeader,
   computeWeeklyGoalState,
   computeDuelState,
-  computeGroupStreakState,
 } from './aggregators'
 import type { Participant, Challenge } from './aggregators'
 
@@ -179,57 +178,5 @@ describe('computeDuelState', () => {
     expect(result.leadingUserId).toBe('u2')
     expect(result.trailingUserId).toBe('u1')
     expect(result.gapSec).toBe(2000)
-  })
-})
-
-// ── computeGroupStreakState ───────────────────────────────────────────────────
-
-describe('computeGroupStreakState', () => {
-  // Sessions keyed by userId: array of UTC date strings "YYYY-MM-DD"
-  it('counts streak days where ALL participants have a session that day', () => {
-    const challenge = makeChallenge({ type: 'group_streak', targetDays: 7 })
-    const sessionsByUser: Record<string, string[]> = {
-      u1: ['2024-01-01', '2024-01-02', '2024-01-03'],
-      u2: ['2024-01-01', '2024-01-02'],
-      u3: ['2024-01-01', '2024-01-02', '2024-01-03'],
-    }
-
-    const result = computeGroupStreakState(challenge, sessionsByUser)
-
-    // Only 2024-01-01 and 2024-01-02 have ALL 3 participants — streak = 2
-    expect(result.currentStreakDays).toBe(2)
-  })
-
-  it('returns 0 streak when no common days exist', () => {
-    const challenge = makeChallenge({ type: 'group_streak', targetDays: 7 })
-    const sessionsByUser: Record<string, string[]> = {
-      u1: ['2024-01-01'],
-      u2: ['2024-01-02'],
-    }
-
-    const result = computeGroupStreakState(challenge, sessionsByUser)
-
-    expect(result.currentStreakDays).toBe(0)
-  })
-
-  it('returns full streak when all participants studied every day', () => {
-    const challenge = makeChallenge({ type: 'group_streak', targetDays: 3 })
-    const days = ['2024-01-01', '2024-01-02', '2024-01-03']
-    const sessionsByUser: Record<string, string[]> = {
-      u1: days,
-      u2: days,
-    }
-
-    const result = computeGroupStreakState(challenge, sessionsByUser)
-
-    expect(result.currentStreakDays).toBe(3)
-  })
-
-  it('handles empty sessionsByUser gracefully', () => {
-    const challenge = makeChallenge({ type: 'group_streak', targetDays: 7 })
-
-    const result = computeGroupStreakState(challenge, {})
-
-    expect(result.currentStreakDays).toBe(0)
   })
 })
