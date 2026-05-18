@@ -64,7 +64,7 @@ export type DuelChallenge = z.infer<typeof duelSchema>
  * Mirrors the backend group_streak day-bucketing in on-session-end.pb.js, so the
  * client-side ceiling matches the maximum streak the server can ever count.
  */
-function utcDaySpan(start: Date, end: Date): number {
+export function utcDaySpan(start: Date, end: Date): number {
   const ONE_DAY = 24 * 60 * 60 * 1000
   const startDay = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
   const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())

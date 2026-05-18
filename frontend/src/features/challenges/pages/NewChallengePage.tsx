@@ -16,6 +16,7 @@ import { BottomNav } from '@/shared/ui/BottomNav'
 import { DateTimePicker } from '@/shared/ui/DateTimePicker'
 import { WheelPicker } from '@/shared/ui/WheelPicker'
 import type { ChallengeType } from '../api/challenges'
+import { utcDaySpan } from '../schemas'
 import { useFriendsList } from '@/features/friends/hooks/useFriends'
 import { Avatar } from '@/features/avatar/components/Avatar'
 
@@ -119,6 +120,9 @@ export function NewChallengePage() {
   const showHoursTarget =
     selectedType === 'race' || selectedType === 'weekly_goal' || selectedType === 'duel'
   const showDaysTarget = selectedType === 'group_streak'
+  // group_streak is cooperative — the whole group wins or loses together, so
+  // there is no "loser" and the prize belongs to the group.
+  const isCooperative = selectedType === 'group_streak'
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -135,6 +139,15 @@ export function NewChallengePage() {
     const start = new Date(step2.startsAt)
     const end = new Date(step2.endsAt)
     if (end <= start) return 'La fecha de fin debe ser posterior al inicio'
+    // A streak goal can never exceed the number of days the challenge runs.
+    if (selectedType === 'group_streak') {
+      const windowDays = utcDaySpan(start, end)
+      if (step2.targetDays > windowDays) {
+        return `La meta de ${step2.targetDays} días no cabe en un reto de ${windowDays} ${
+          windowDays === 1 ? 'día' : 'días'
+        }`
+      }
+    }
     return null
   }
 
@@ -168,7 +181,8 @@ export function NewChallengePage() {
           targetSec: showHoursTarget ? step2.targetHours * 3600 : undefined,
           targetDays: showDaysTarget ? step2.targetDays : undefined,
           prizeWinner,
-          prizeLoser: prizeLoser || undefined,
+          // Cooperative challenges have no loser — never send a loser penalty.
+          prizeLoser: isCooperative ? undefined : prizeLoser || undefined,
           status: 'pending',
         },
         participantUserIds: selectedFriendIds,
@@ -349,33 +363,41 @@ export function NewChallengePage() {
               <div className="flex items-center gap-2">
                 <Trophy size={16} className="text-(--color-primary)" />
                 <label className="text-xs uppercase tracking-widest opacity-70">
-                  Premio del ganador
+                  {isCooperative ? 'Premio del grupo' : 'Premio del ganador'}
                 </label>
               </div>
               <input
                 value={prizeWinner}
                 onChange={(e) => setPrizeWinner(e.target.value)}
-                placeholder="Cena, película, lo que sea..."
+                placeholder={
+                  isCooperative
+                    ? 'Lo que se ganan si logran la racha...'
+                    : 'Cena, película, lo que sea...'
+                }
                 maxLength={200}
                 className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
               />
             </div>
 
-            <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-              <div className="flex items-center gap-2">
-                <Frown size={16} className="opacity-70" />
-                <label className="text-xs uppercase tracking-widest opacity-70">
-                  Penitencia del perdedor <span className="normal-case opacity-60">(opcional)</span>
-                </label>
+            {/* Cooperative challenges have no loser — the whole group wins or
+                loses together, so the loser-penalty field is hidden. */}
+            {!isCooperative && (
+              <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center gap-2">
+                  <Frown size={16} className="opacity-70" />
+                  <label className="text-xs uppercase tracking-widest opacity-70">
+                    Penitencia del perdedor <span className="normal-case opacity-60">(opcional)</span>
+                  </label>
+                </div>
+                <input
+                  value={prizeLoser}
+                  onChange={(e) => setPrizeLoser(e.target.value)}
+                  placeholder="Lavar los platos durante una semana..."
+                  maxLength={200}
+                  className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
+                />
               </div>
-              <input
-                value={prizeLoser}
-                onChange={(e) => setPrizeLoser(e.target.value)}
-                placeholder="Lavar los platos durante una semana..."
-                maxLength={200}
-                className="rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-(--color-primary)"
-              />
-            </div>
+            )}
 
             <button
               type="button"

@@ -216,7 +216,11 @@ export function ChallengeDetailPage() {
         {/* ── Prizes ────────────────────────────────────────────────── */}
         <section>
           <h2 className="text-xs uppercase tracking-widest opacity-50 mb-3">Premio</h2>
-          <PrizeDisplay prizeWinner={challenge.prizeWinner} prizeLoser={challenge.prizeLoser} />
+          <PrizeDisplay
+            prizeWinner={challenge.prizeWinner}
+            prizeLoser={challenge.prizeLoser}
+            cooperative={challenge.type === 'group_streak'}
+          />
         </section>
 
         {/* ── Participants ──────────────────────────────────────────── */}

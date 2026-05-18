@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.13] — 2026-05-18
+
+### Changed
+- Group streak is a cooperative challenge: the create wizard now labels the
+  prize "Premio del grupo" and hides the loser-penalty field, and the challenge
+  detail screen shows the prize as the group's. The streak-goal-vs-window check
+  now also runs inline in the wizard (step 2), not only at submit.
+
 ## [0.5.12] — 2026-05-18
 
 ### Fixed
